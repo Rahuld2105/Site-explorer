@@ -3,14 +3,6 @@ import PropTypes from 'prop-types';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
-function MenuIcon() {
-  return (
-    <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-      <path d="M4 7h16M4 12h16M4 17h16" />
-    </svg>
-  );
-}
-
 function SearchIcon() {
   return (
     <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
@@ -33,7 +25,7 @@ function BellIcon() {
  * Modern mobile-first navbar with Airbnb-inspired design.
  * Features sticky positioning, search pill, and profile menu.
  */
-export default function Navbar({ onChatOpen = () => {}, onMenuToggle = () => {}, user = null }) {
+export default function Navbar({ onChatOpen, user }) {
   const location = useLocation();
   const navigate = useNavigate();
   const { isAuthenticated, logout } = useAuth();
@@ -62,7 +54,7 @@ export default function Navbar({ onChatOpen = () => {}, onMenuToggle = () => {},
   if (isAdminRoute) {
     return (
       <header className="sticky top-0 z-40 border-b border-slate-200 bg-white">
-        <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+        <div className="container flex h-14 items-center justify-between">
           <Link to="/" className="flex items-center gap-2 font-heading text-lg font-bold text-slate-900">
             <span>🌍</span>
             <span className="hidden sm:inline">TourVision Admin</span>
@@ -79,33 +71,26 @@ export default function Navbar({ onChatOpen = () => {}, onMenuToggle = () => {},
 
   return (
     <header className={`sticky top-0 z-40 border-b border-slate-200 bg-white transition-shadow duration-300 ${isScrolled ? 'shadow-sm' : ''}`}>
-      <div className="flex h-14 items-center justify-between gap-3 px-4 sm:px-6 md:h-16 lg:px-8">
-        <div className="flex flex-shrink-0 items-center gap-3">
-          <button
-            type="button"
-            onClick={onMenuToggle}
-            className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 text-slate-600 transition-all duration-300 hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500/60 focus-visible:ring-offset-2 lg:hidden"
-            aria-label="Open navigation menu"
-          >
-            <MenuIcon />
-          </button>
+      <div className="container flex h-14 items-center justify-between gap-3 md:h-16">
+        {/* Logo */}
+        <Link to="/" className="flex items-center gap-2">
+          <span className="text-2xl">🌍</span>
+          <span className="hidden font-heading font-bold text-slate-900 sm:inline">TourVision</span>
+        </Link>
 
-          <Link to="/" className="flex items-center gap-2">
-            <span className="text-2xl">🌍</span>
-            <span className="hidden font-heading font-bold text-slate-900 sm:inline">TourVision</span>
-          </Link>
-        </div>
-
+        {/* Search bar - hidden on mobile */}
         <button
           type="button"
           onClick={() => navigate('/nearby')}
-          className="hidden min-w-[280px] flex-shrink-0 items-center rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-left hover:shadow-sm md:flex"
+          className="hidden min-w-[280px] items-center rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-left hover:shadow-sm md:flex"
         >
           <span className="flex-1 text-sm text-slate-500">Search destinations...</span>
           <SearchIcon />
         </button>
 
-        <div className="flex flex-shrink-0 items-center gap-2 md:gap-4">
+        {/* Right section */}
+        <div className="flex items-center gap-2 md:gap-4">
+          {/* Mobile search button */}
           <button
             type="button"
             onClick={() => navigate('/nearby')}
@@ -115,15 +100,17 @@ export default function Navbar({ onChatOpen = () => {}, onMenuToggle = () => {},
             <SearchIcon />
           </button>
 
+          {/* Notifications */}
           <button type="button" className="hidden h-10 w-10 items-center justify-center rounded-full text-slate-600 hover:bg-slate-100 md:flex" aria-label="Notifications">
             <BellIcon />
           </button>
 
+          {/* Profile menu */}
           <div className="relative" ref={menuRef}>
             <button
               type="button"
               onClick={() => setMenuOpen(!menuOpen)}
-              className="flex h-10 items-center gap-2 rounded-full border border-slate-200 px-3 hover:shadow-sm"
+              className="flex h-10 items-center gap-2 rounded-full border border-slate-200 px-3 hover:shadow-sm md:gap-3"
               aria-label="Menu"
             >
               <span className="text-lg">👤</span>
@@ -146,37 +133,17 @@ export default function Navbar({ onChatOpen = () => {}, onMenuToggle = () => {},
                       }}
                       className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
                     >
-                      Trip Planner
+                      My Trips
                     </button>
                     <button
                       type="button"
                       onClick={() => {
-                        navigate('/saved');
+                        navigate('/expenses');
                         setMenuOpen(false);
                       }}
                       className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
                     >
-                      Saved Places
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        navigate('/trips');
-                        setMenuOpen(false);
-                      }}
-                      className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
-                    >
-                      Trips & Expenses
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        navigate('/profile');
-                        setMenuOpen(false);
-                      }}
-                      className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
-                    >
-                      Profile
+                      Wishlist
                     </button>
                     <button type="button" onClick={onChatOpen} className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50">
                       Help & Support
@@ -220,9 +187,13 @@ export default function Navbar({ onChatOpen = () => {}, onMenuToggle = () => {},
 
 Navbar.propTypes = {
   onChatOpen: PropTypes.func,
-  onMenuToggle: PropTypes.func,
   user: PropTypes.shape({
     name: PropTypes.string,
     email: PropTypes.string
   })
+};
+
+Navbar.defaultProps = {
+  onChatOpen: () => {},
+  user: null
 };

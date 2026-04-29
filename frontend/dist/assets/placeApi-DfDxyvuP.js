@@ -1,0 +1,1 @@
+import{k as s}from"./index-DiFIajqd.js";const a=e=>s.get("/places",{params:e}),n=e=>s.get(`/places/${e}`),o=e=>s.get(`/places/${e}/ai-content`),g=e=>s.post("/qr/scan",e),p=(e,c)=>s.post(`/places/${e}/geofence`,c);export{n as a,o as b,p as c,a as g,g as s};

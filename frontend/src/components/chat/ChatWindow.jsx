@@ -128,34 +128,35 @@ export default function ChatWindow({ contextPlaceId, isOpen, onClose }) {
   }
 
   return (
-    <div className="fixed bottom-40 right-4 z-50 w-[calc(100%-2rem)] max-w-md lg:bottom-24">
-      <div className="panel-strong overflow-hidden">
-        <div className="flex items-center justify-between border-b border-white/10 px-4 py-4">
+    <div className="fixed inset-x-4 bottom-4 z-50 mx-auto max-w-md lg:right-8 lg:left-auto lg:bottom-8">
+      <div className="panel-strong overflow-hidden bg-slate-950 text-white shadow-soft border border-slate-800">
+        <div className="flex items-center justify-between border-b border-slate-700/80 bg-slate-950 px-4 py-4">
           <div>
-            <h2 className="font-heading text-xl text-white">AI Guide</h2>
+            <h2 className="font-heading text-xl">AI Guide</h2>
             <p className="text-xs text-slate-400">
               {contextPlaceId ? `Contextual help for place #${contextPlaceId}` : 'Global travel assistant'}
             </p>
           </div>
-          <button type="button" className="btn-secondary px-3 py-2 text-sm" onClick={onClose}>
+          <button type="button" className="btn-secondary px-3 py-2 text-sm text-slate-100" onClick={onClose}>
             Close
           </button>
         </div>
 
-        <div ref={scrollRef} className="max-h-[380px] space-y-3 overflow-y-auto px-4 py-4">
+        <div ref={scrollRef} className="max-h-90 space-y-3 overflow-y-auto bg-slate-950 px-4 py-4">
           {messages.map((message) => (
             <ChatMessage key={message.id} message={message} />
           ))}
         </div>
 
-        <form className="border-t border-white/10 p-4" onSubmit={handleSubmit}>
+        <form className="border-t border-slate-700/80 bg-slate-950 p-4" onSubmit={handleSubmit}>
           <textarea
-            className="field min-h-[88px] resize-none"
+            className="field min-h-22 resize-none bg-slate-900 text-white border-slate-700 placeholder:text-slate-500"
             placeholder="Ask about the current place, routes, budgets, or nearby recommendations..."
             value={input}
             onChange={(event) => setInput(event.target.value)}
+            rows={4}
           />
-          <div className="mt-3 flex items-center justify-between">
+          <div className="mt-3 flex items-center justify-between gap-3">
             {loading ? <Loader label="Streaming..." size="sm" /> : <span className="text-xs text-slate-400">Responses stream into the chat window.</span>}
             <button type="submit" className="btn-primary px-4 py-2 text-sm" disabled={loading}>
               Send

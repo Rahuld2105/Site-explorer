@@ -1,1 +1,0 @@
-import{k as s}from"./index-9yPKPA_v.js";const t=e=>s.get("/places",{params:e}),n=e=>s.get(`/places/${e}`),o=e=>s.get(`/places/${e}/ai-content`),g=e=>s.get("/places/nearby",{params:e}),p=e=>s.post("/qr/scan",e),l=(e,a)=>s.post(`/places/${e}/geofence`,a);export{n as a,o as b,l as c,g as d,t as g,p as s};

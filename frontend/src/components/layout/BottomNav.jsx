@@ -56,10 +56,10 @@ export default function BottomNav() {
 
   const tabs = [
     { label: 'Explore', kind: 'explore', active: location.pathname === '/' || location.pathname === '/nearby', action: () => navigate('/nearby') },
-    { label: 'Wishlists', kind: 'wishlist', active: location.pathname === '/expenses', action: () => navigate('/expenses') },
-    { label: 'Trips', kind: 'trips', active: location.pathname === '/trip-planner', action: () => navigate('/trip-planner') },
+    { label: 'Wishlists', kind: 'wishlist', active: location.pathname === '/saved', action: () => navigate('/saved') },
+    { label: 'Trips', kind: 'trips', active: location.pathname.startsWith('/trips') || location.pathname === '/expenses', action: () => navigate('/trips') },
     { label: 'Inbox', kind: 'inbox', active: false, action: () => window.dispatchEvent(new CustomEvent('tourvision:open-chat')) },
-    { label: 'Profile', kind: 'profile', active: location.pathname === '/login' || location.pathname === '/signup', action: () => navigate(isAuthenticated ? '/expenses' : '/login') }
+    { label: 'Profile', kind: 'profile', active: location.pathname === '/profile' || location.pathname === '/login' || location.pathname === '/signup', action: () => navigate(isAuthenticated ? '/profile' : '/login') }
   ];
 
   return (
