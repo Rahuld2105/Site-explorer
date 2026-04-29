@@ -12,6 +12,11 @@ export default function PlaceCard({ meta, onSelect, place }) {
   const score = Number(place.score || 8.9).toFixed(1);
   const price = Number(place.price || place.entry_fee || 0);
   const hasAr = Boolean(place.has_ar || place.ar_model_url);
+  const locationLabel =
+    place.location_name ||
+    place.city ||
+    (typeof place.location === 'string' ? place.location : '') ||
+    'TourVision destination';
 
   return (
     <article className="cursor-pointer" onClick={() => onSelect?.(place)}>
@@ -41,7 +46,7 @@ export default function PlaceCard({ meta, onSelect, place }) {
         </div>
 
         <div className="mt-1 flex items-center justify-between gap-3 text-[13px] text-[var(--c-text-secondary)]">
-          <span>{place.location_name || place.location || place.city || 'TourVision destination'}</span>
+          <span>{locationLabel}</span>
           <span className="badge badge-neutral">{distance}</span>
         </div>
 

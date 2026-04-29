@@ -9,6 +9,7 @@ import Loader from './components/common/Loader';
 import ProgressBar from './components/common/ProgressBar';
 import ProtectedRoute from './components/common/ProtectedRoute';
 import { useAuth } from './context/AuthContext';
+import useSidebar from './hooks/useSidebar';
 import { useSocket } from './hooks/useSocket';
 
 const Home = lazy(() => import('./pages/Home'));
@@ -17,7 +18,11 @@ const Signup = lazy(() => import('./pages/Signup'));
 const PlacePage = lazy(() => import('./pages/PlacePage'));
 const NearbyPage = lazy(() => import('./pages/NearbyPage'));
 const TripPlannerPage = lazy(() => import('./pages/TripPlannerPage'));
-const ExpensePage = lazy(() => import('./pages/ExpensePage'));
+const ExpenseTrackerPage = lazy(() => import('./pages/ExpenseTracker'));
+const TripsPage = lazy(() => import('./pages/TripsPage'));
+const TripDetailsPage = lazy(() => import('./pages/TripDetailsPage'));
+const SavedPage = lazy(() => import('./pages/SavedPage'));
+const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const AdminPage = lazy(() => import('./pages/AdminPage'));
 
 /**
@@ -90,6 +95,13 @@ LazyPage.propTypes = {
 function AppFrame() {
   const location = useLocation();
   const { user } = useAuth();
+  const {
+    closeMobileSidebar,
+    isCollapsed,
+    isMobileOpen,
+    openMobileSidebar,
+    toggleCollapse
+  } = useSidebar();
   const [chatOpen, setChatOpen] = useState(false);
   const [progressState, setProgressState] = useState({
     visible: false,
@@ -145,10 +157,20 @@ function AppFrame() {
 
   return (
     <div className="min-h-screen bg-[var(--c-bg)] text-[var(--c-text-primary)]">
-      <Sidebar />
+      <Sidebar
+        isCollapsed={isCollapsed}
+        isMobileOpen={isMobileOpen}
+        onCloseMobile={closeMobileSidebar}
+        onToggleCollapse={toggleCollapse}
+      />
 
-      <div className="relative">
-        <Navbar onChatOpen={() => setChatOpen(true)} user={user} />
+      <div
+        className={[
+          'relative transition-all duration-300',
+          isAdminRoute ? '' : isCollapsed ? 'lg:pl-24' : 'lg:pl-72'
+        ].join(' ')}
+      >
+        <Navbar onChatOpen={() => setChatOpen(true)} onMenuToggle={openMobileSidebar} user={user} />
 
         <main className={`${isAdminRoute ? 'pb-24' : 'pb-24'} lg:pb-10`}>
           <Outlet />
@@ -247,7 +269,39 @@ export default function App() {
           path="/expenses"
           element={
             <LazyPage>
-              <ExpensePage />
+              <ExpenseTrackerPage />
+            </LazyPage>
+          }
+        />
+        <Route
+          path="/trips"
+          element={
+            <LazyPage>
+              <TripsPage />
+            </LazyPage>
+          }
+        />
+        <Route
+          path="/trips/:id"
+          element={
+            <LazyPage>
+              <TripDetailsPage />
+            </LazyPage>
+          }
+        />
+        <Route
+          path="/saved"
+          element={
+            <LazyPage>
+              <SavedPage />
+            </LazyPage>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <LazyPage>
+              <ProfilePage />
             </LazyPage>
           }
         />

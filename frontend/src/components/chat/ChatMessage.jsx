@@ -10,10 +10,10 @@ export default function ChatMessage({ message }) {
     <div className={`flex ${isAssistant ? 'justify-start' : 'justify-end'}`}>
       <div
         className={[
-          'max-w-[85%] rounded-[12px] px-4 py-3 text-sm leading-6 shadow-soft',
+          'max-w-[85%] rounded-xl px-4 py-3 text-sm leading-6 shadow-soft',
           isAssistant
-            ? 'bg-white/[0.08] text-slate-100'
-            : 'bg-[linear-gradient(135deg,_rgba(96,165,250,0.92),_rgba(56,189,248,0.82))] text-white'
+            ? 'bg-slate-800 text-slate-100 border border-slate-700'
+            : 'bg-sky-500 text-white'
         ].join(' ')}
       >
         {message.content}

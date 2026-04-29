@@ -7,15 +7,21 @@ import { FALLBACK_PLACES } from '../constants/homeData';
  * @returns {object} Normalized place
  */
 export function normalizePlace(place, index) {
+  const coordinates = place.coordinates || place.location?.coordinates || place.geometry?.coordinates;
+  const lat =
+    Number(place.lat ?? place.latitude ?? coordinates?.lat ?? coordinates?.[1] ?? place.location?.lat);
+  const lng =
+    Number(place.lng ?? place.longitude ?? coordinates?.lng ?? coordinates?.[0] ?? place.location?.lng);
+  const safeLocation =
+    place.location_name ||
+    place.city ||
+    (typeof place.location === 'string' ? place.location : '') ||
+    (Number.isFinite(lat) && Number.isFinite(lng) ? `${lat.toFixed(3)}, ${lng.toFixed(3)}` : 'TourVision destination');
+
   return {
     id: place.id || index + 1,
     name: place.name || place.title || `Place ${index + 1}`,
-    location_name:
-      place.location_name ||
-      place.city ||
-      (place.location?.coordinates
-        ? `${place.location.coordinates[1]}, ${place.location.coordinates[0]}`
-        : 'TourVision destination'),
+    location_name: safeLocation,
     category: place.category || place.type || 'Experience',
     distance: Number(place.distance || 0),
     rating: Number(place.rating || 4.8),
@@ -32,5 +38,11 @@ export function normalizePlace(place, index) {
       place.region ||
       place.country ||
       (index % 2 === 0 ? 'India' : 'Asia'),
+    lat: Number.isFinite(lat) ? lat : FALLBACK_PLACES[index % FALLBACK_PLACES.length].lat,
+    lng: Number.isFinite(lng) ? lng : FALLBACK_PLACES[index % FALLBACK_PLACES.length].lng,
+    coordinates: Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null,
+    city: place.city || '',
+    type: place.type || '',
+    tags: place.tags || []
   };
 }

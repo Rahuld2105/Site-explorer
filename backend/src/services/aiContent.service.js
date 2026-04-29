@@ -45,13 +45,34 @@ async function generateChatReply({ place, placeId, zone, message, history = [] }
     place?.ai_content?.summary ||
     place?.description ||
     "It is a popular stop with cultural and visual highlights.";
-  const conversationHint =
-    history.length > 1
-      ? "I also remember the recent context from this conversation."
-      : "I can keep helping with nearby tips, routes, and stories.";
+
+  const normalizedMessage = message.trim().toLowerCase();
+  const isGreeting = /^(hi|hello|hey|hii|hiya|good morning|good afternoon|good evening)[!']*$/i.test(message);
+  const isRouteQuestion = /route|walk|walking|path|way|direction|how do I get|where to go/.test(normalizedMessage);
+  const isHistoryQuestion = /history|story|culture|heritage|background|tell me about/.test(normalizedMessage);
+
+  let replyText;
+  if (isGreeting) {
+    replyText = `Hello! ${placeName} is a popular stop with cultural and visual highlights. You're currently in the ${zone || "general"} zone. Ask me for nearby tips, routes, or stories and I’ll help you find the best viewpoint, walking route, or local landmark.`;
+  } else if (isRouteQuestion) {
+    replyText = `For ${placeName}, the easiest route from your current position is to head toward the nearest signature viewpoint first, then follow the pedestrian path past the cultural square and finish at the historic market. I can give you the exact walking route if you want.`;
+  } else if (isHistoryQuestion) {
+    replyText = `This place has a rich story: ${placeSummary} I can share the key historical highlights and why the viewpoint is important to local culture.`;
+  } else {
+    const conversationHint =
+      history.length > 1
+        ? "I also remember the recent context from this conversation."
+        : "I can keep helping with nearby tips, routes, and stories.";
+
+    replyText = `Here is your TourVision guide for ${placeName}: ${placeSummary} You are currently in the ${zone || "general"} zone. ${conversationHint} In response to "${message}", I suggest focusing on the signature viewpoint, the local history, and the best walking route from your current position.`;
+  }
+
+  if (!process.env.ML_SERVICE_URL) {
+    console.warn("ML_SERVICE_URL is not configured, using local chat fallback.");
+  }
 
   return {
-    reply: `Here is your TourVision guide for ${placeName}: ${placeSummary} You are currently in the ${zone || "general"} zone. ${conversationHint} In response to "${message}", I suggest focusing on the signature viewpoint, the local history, and the best walking route from your current position.`,
+    reply: replyText,
     caption: `Exploring ${placeName}: ${placeSummary}`,
     source: "local-fallback"
   };

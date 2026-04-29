@@ -52,9 +52,18 @@ const sendMessage = asyncHandler(async (req, res) => {
     message,
     history: session.messages
   });
-  const ttsResult = aiResult.tts_audio_url
-    ? { audioUrl: aiResult.tts_audio_url }
-    : await generateSpeech(aiResult.reply);
+
+  let ttsResult = { audioUrl: '' };
+  if (aiResult.tts_audio_url) {
+    ttsResult.audioUrl = aiResult.tts_audio_url;
+  } else {
+    try {
+      ttsResult = await generateSpeech(aiResult.reply);
+    } catch (ttsError) {
+      console.warn('TTS generation failed, returning chat reply without audio:', ttsError.message);
+      ttsResult = { audioUrl: '' };
+    }
+  }
 
   session.messages.push({
     role: "assistant",
