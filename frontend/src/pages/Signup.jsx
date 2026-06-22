@@ -2,7 +2,7 @@ import { useState } from 'react';
 import PropTypes from 'prop-types';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { signup } from '../api/authApi';
+import { signup as signupRequest } from '../api/authApi';
 import { extractData, extractMessage } from '../api/responseUtils';
 import Loader from '../components/common/Loader';
 import { useAuth } from '../context/AuthContext';
@@ -53,7 +53,7 @@ export default function Signup() {
     setLoading(true);
 
     try {
-      const response = await signup(form);
+      const response = await signupRequest(form);
       login(extractData(response));
       toast.success('Your TourVision account is ready.');
       navigate('/');

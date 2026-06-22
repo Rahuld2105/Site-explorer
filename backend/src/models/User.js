@@ -44,6 +44,58 @@ const userSchema = new mongoose.Schema(
         type: [String],
         default: []
       }
+    },
+    saved_trips: {
+      type: [
+        {
+          trip: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Trip",
+            default: null
+          },
+          name: String,
+          saved_at: {
+            type: Date,
+            default: Date.now
+          }
+        }
+      ],
+      default: []
+    },
+    trip_history: {
+      type: [
+        {
+          trip: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Trip",
+            default: null
+          },
+          name: String,
+          status: String,
+          completed_at: Date
+        }
+      ],
+      default: []
+    },
+    uploaded_media: {
+      type: [
+        {
+          trip: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Trip",
+            default: null
+          },
+          trip_id: String,
+          media_url: String,
+          mime_type: String,
+          original_name: String,
+          uploaded_at: {
+            type: Date,
+            default: Date.now
+          }
+        }
+      ],
+      default: []
     }
   },
   buildSchemaOptions()

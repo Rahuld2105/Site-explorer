@@ -13,7 +13,11 @@ import { resolvePlaceImage } from '../utils/placeImages';
 
 const DEFAULT_CENTER = { lat: 20.5937, lng: 78.9629 };
 const DEFAULT_RADIUS_KM = 20;
-const FILTER_CHIPS = ['All', 'Top Rated', 'AR', 'Free Entry', 'Nearest'];
+const FILTER_CHIPS = ['All', 'Hotels', 'Restaurants', 'Hospitals', 'Fuel Stations', 'Top Rated', 'AR', 'Free Entry', 'Nearest'];
+const SERVICE_FILTERS = {
+  Restaurants: ['Vegetarian', 'Non-Vegetarian'],
+  'Fuel Stations': ['Petrol', 'Diesel', 'CNG']
+};
 const AVG_DRIVE_SPEED_KMH = 32;
 
 function formatDuration(minutes) {
@@ -154,6 +158,46 @@ function enrichNearbyPlace(place, index, userLocation) {
   };
 }
 
+function createNearbyServices(userLocation) {
+  if (!userLocation?.lat || !userLocation?.lng) {
+    return [];
+  }
+
+  const serviceData = [
+    ['Hotels', 'Heritage Stay', 0.012, 0.008, 4.5, ['Rooms']],
+    ['Hotels', 'Fort View Lodge', -0.014, 0.011, 4.2, ['Family stay']],
+    ['Restaurants', 'Green Thali House', 0.007, -0.012, 4.6, ['Vegetarian']],
+    ['Restaurants', 'Trail Kitchen', -0.01, -0.009, 4.4, ['Non-Vegetarian']],
+    ['Hospitals', 'City Care Hospital', 0.018, -0.004, 4.1, ['Emergency']],
+    ['Hospitals', 'Primary Health Center', -0.018, 0.006, 4.0, ['First aid']],
+    ['Fuel Stations', 'HP Fuel Point', 0.02, 0.014, 4.3, ['Petrol', 'Diesel']],
+    ['Fuel Stations', 'Green CNG Station', -0.022, -0.01, 4.1, ['CNG', 'Petrol']]
+  ];
+
+  return serviceData.map(([category, name, latOffset, lngOffset, rating, tags], index) => {
+    const lat = Number(userLocation.lat) + latOffset;
+    const lng = Number(userLocation.lng) + lngOffset;
+    const distance = haversine(userLocation.lat, userLocation.lng, lat, lng);
+
+    return {
+      id: `service-${category}-${index}`,
+      name,
+      category,
+      type: 'service',
+      tags,
+      rating,
+      review_count: 180 + index * 29,
+      price: 0,
+      lat,
+      lng,
+      distance,
+      distanceLabel: `${distance.toFixed(1)} km away`,
+      location_name: tags.join(', '),
+      image: 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=700&auto=format&fit=crop&q=80'
+    };
+  });
+}
+
 function NearbySkeleton() {
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
@@ -271,6 +315,7 @@ function PlaceListCard({ isRouting, isSelected, onAiGuide, onExplore, onSelect, 
   const hasAr = Boolean(place.has_ar || place.ar_model_url);
   const hasAi = Boolean(place.has_ai_content || place.ai_content_available || place.has_ar || true);
   const travelTime = formatDuration(estimateDriveMinutes(place.distance));
+  const isService = place.type === 'service';
 
   return (
     <article
@@ -315,16 +360,18 @@ function PlaceListCard({ isRouting, isSelected, onAiGuide, onExplore, onSelect, 
           </div>
 
           <div className="mt-3 flex gap-2">
-            <button
-              type="button"
-              className="rounded-full bg-slate-950 px-3.5 py-1.5 text-xs font-extrabold text-white transition hover:bg-teal-700"
-              onClick={(event) => {
-                event.stopPropagation();
-                onExplore();
-              }}
-            >
-              Explore
-            </button>
+            {!isService ? (
+              <button
+                type="button"
+                className="rounded-full bg-slate-950 px-3.5 py-1.5 text-xs font-extrabold text-white transition hover:bg-teal-700"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onExplore();
+                }}
+              >
+                Explore
+              </button>
+            ) : null}
             <button
               type="button"
               className="rounded-full bg-teal-600 px-3.5 py-1.5 text-xs font-extrabold text-white transition hover:bg-teal-700 disabled:cursor-wait disabled:opacity-70"
@@ -336,16 +383,18 @@ function PlaceListCard({ isRouting, isSelected, onAiGuide, onExplore, onSelect, 
             >
               {isRouting ? 'Routing...' : 'Show Route'}
             </button>
-            <button
-              type="button"
-              className="rounded-full border border-slate-200 px-3.5 py-1.5 text-xs font-extrabold text-slate-700 transition hover:border-teal-200 hover:bg-teal-50 hover:text-teal-800"
-              onClick={(event) => {
-                event.stopPropagation();
-                onAiGuide();
-              }}
-            >
-              AI Guide
-            </button>
+            {!isService ? (
+              <button
+                type="button"
+                className="rounded-full border border-slate-200 px-3.5 py-1.5 text-xs font-extrabold text-slate-700 transition hover:border-teal-200 hover:bg-teal-50 hover:text-teal-800"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onAiGuide();
+                }}
+              >
+                AI Guide
+              </button>
+            ) : null}
           </div>
         </div>
       </div>
@@ -373,7 +422,9 @@ PlaceListCard.propTypes = {
     location_name: PropTypes.string,
     name: PropTypes.string.isRequired,
     price: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
-    rating: PropTypes.oneOfType([PropTypes.number, PropTypes.string])
+    rating: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+    tags: PropTypes.arrayOf(PropTypes.string),
+    type: PropTypes.string
   }).isRequired
 };
 
@@ -385,6 +436,7 @@ export default function NearbyPage() {
   const [places, setPlaces] = useState([]);
   const [loading, setLoading] = useState(false);
   const [activeChip, setActiveChip] = useState('All');
+  const [serviceFilter, setServiceFilter] = useState('');
   const [selectedPlaceId, setSelectedPlaceId] = useState(null);
   const [search, setSearch] = useState('');
   const [routeInfo, setRouteInfo] = useState(null);
@@ -470,15 +522,19 @@ export default function NearbyPage() {
         const list = nearbyItems.map((place, index) =>
           enrichNearbyPlace(place, index, debouncedLocation)
         );
+        const services = createNearbyServices(debouncedLocation);
 
         if (isMounted) {
-          setPlaces(list);
-          setSelectedPlaceId(list[0]?.id || null);
+          setPlaces([...list, ...services]);
+          setSelectedPlaceId(list[0]?.id || services[0]?.id || null);
         }
       } catch (error) {
         if (isMounted) {
           toast.error(extractMessage(error, 'Unable to load nearby places.'));
-          const fallbackList = FALLBACK_PLACES.map((place, index) => enrichNearbyPlace(place, index, debouncedLocation));
+          const fallbackList = [
+            ...FALLBACK_PLACES.map((place, index) => enrichNearbyPlace(place, index, debouncedLocation)),
+            ...createNearbyServices(debouncedLocation)
+          ];
           setPlaces(fallbackList);
           setSelectedPlaceId(fallbackList[0]?.id || null);
           setUsedFallback(true);
@@ -509,6 +565,8 @@ export default function NearbyPage() {
 
     if (activeChip === 'Top Rated') {
       filtered.sort((a, b) => Number(b.rating || 0) - Number(a.rating || 0));
+    } else if (['Hotels', 'Restaurants', 'Hospitals', 'Fuel Stations'].includes(activeChip)) {
+      filtered = filtered.filter((place) => place.category === activeChip);
     } else if (activeChip === 'AR') {
       filtered = filtered.filter((place) => place.has_ar);
     } else if (activeChip === 'Free Entry') {
@@ -517,8 +575,12 @@ export default function NearbyPage() {
       filtered.sort((a, b) => Number(a.distance || 0) - Number(b.distance || 0));
     }
 
+    if (serviceFilter) {
+      filtered = filtered.filter((place) => (place.tags || []).includes(serviceFilter));
+    }
+
     return filtered;
-  }, [activeChip, places, search]);
+  }, [activeChip, places, search, serviceFilter]);
 
   const selectedPlace = useMemo(
     () => results.find((place) => String(place.id) === String(selectedPlaceId)) || results[0] || null,
@@ -536,6 +598,13 @@ export default function NearbyPage() {
 
   const selectPlace = (place) => {
     setSelectedPlaceId(place.id);
+  };
+
+  const setChip = (chip) => {
+    setActiveChip(chip);
+    if (!SERVICE_FILTERS[chip]?.includes(serviceFilter)) {
+      setServiceFilter('');
+    }
   };
 
   const showRoute = async (place) => {
@@ -661,10 +730,10 @@ export default function NearbyPage() {
             <div>
               <p className="text-sm font-black uppercase tracking-[0.18em] text-teal-700">Nearby Places</p>
               <h1 className="mt-2 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
-                Explore Nearby Historic Places
+                Explore Nearby Places and Services
               </h1>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
-                Discover forts, landmarks, and AI-guided experiences near you.
+                Discover forts, hotels, restaurants, hospitals, fuel stations, routes, ratings, and directions near you.
               </p>
             </div>
             <label className="relative block">
@@ -691,7 +760,7 @@ export default function NearbyPage() {
                       ? 'bg-gradient-to-r from-slate-950 to-teal-700 text-white shadow-lg shadow-teal-500/20'
                       : 'border border-slate-200 bg-white text-slate-600 hover:-translate-y-0.5 hover:border-teal-200 hover:text-teal-800'
                   ].join(' ')}
-                  onClick={() => setActiveChip(chip)}
+                  onClick={() => setChip(chip)}
                 >
                   {chip}
                 </button>
@@ -702,6 +771,25 @@ export default function NearbyPage() {
               {usedFallback ? <span className="ml-2 text-amber-600">Fallback results</span> : null}
             </p>
           </div>
+          {SERVICE_FILTERS[activeChip] ? (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {SERVICE_FILTERS[activeChip].map((filter) => (
+                <button
+                  key={filter}
+                  type="button"
+                  className={[
+                    'rounded-full px-3 py-1.5 text-xs font-extrabold transition',
+                    serviceFilter === filter
+                      ? 'bg-teal-600 text-white'
+                      : 'border border-slate-200 bg-white text-slate-600 hover:border-teal-200 hover:text-teal-700'
+                  ].join(' ')}
+                  onClick={() => setServiceFilter((current) => (current === filter ? '' : filter))}
+                >
+                  {filter}
+                </button>
+              ))}
+            </div>
+          ) : null}
         </div>
 
         <div className="grid gap-5 lg:grid-cols-[380px_1fr]">

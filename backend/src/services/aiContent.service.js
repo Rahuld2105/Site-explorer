@@ -1,7 +1,57 @@
 const axios = require("axios");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
-const MODEL_NAME = "models/gemini-flash-latest";
+const MODEL_NAME = process.env.GEMINI_MODEL || "models/gemini-flash-latest";
+
+function getGeminiApiKey() {
+  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+
+  if (!apiKey || apiKey === "your_api_key_here" || apiKey === "your_new_gemini_api_key_here") {
+    const error = new Error("Gemini API key is not configured.");
+    error.statusCode = 503;
+    error.publicMessage = "Gemini API key is not configured.";
+    throw error;
+  }
+
+  return apiKey;
+}
+
+function getGeminiModel() {
+  const genAI = new GoogleGenerativeAI(getGeminiApiKey());
+
+  return genAI.getGenerativeModel({
+    model: MODEL_NAME
+  });
+}
+
+function toGeminiPublicError(error) {
+  const details = [
+    error?.message,
+    error?.statusText,
+    ...(Array.isArray(error?.errorDetails) ? error.errorDetails.map((detail) => JSON.stringify(detail)) : [])
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  if (/CONSUMER_SUSPENDED|has been suspended/i.test(details)) {
+    return {
+      statusCode: 503,
+      message: "Gemini API access is suspended for the configured key. Replace it with a new active key."
+    };
+  }
+
+  if (/API key not valid|permission denied|forbidden|PERMISSION_DENIED/i.test(details)) {
+    return {
+      statusCode: 503,
+      message: "Gemini API key is invalid or does not have access."
+    };
+  }
+
+  return {
+    statusCode: 502,
+    message: "Gemini service is temporarily unavailable."
+  };
+}
 
 function getMlClient() {
   return axios.create({
@@ -20,19 +70,11 @@ async function postToMl(path, payload) {
 }
 
 async function generateChatReply({ place, placeId, zone, message, history = [] }) {
-  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
-  if (!apiKey || apiKey === "your_api_key_here") {
-    throw new Error("Gemini API key is not configured.");
-  }
-
   const placeName = place?.name || placeId || "the current place";
   console.log("PLACE:", placeName);
   console.log("MESSAGE:", message);
 
-  const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({
-    model: MODEL_NAME
-  });
+  const model = getGeminiModel();
   console.log("Using model:", MODEL_NAME);
   const prompt = `
 You are a travel guide.
@@ -58,8 +100,12 @@ Give short helpful answer.
       source: "gemini"
     };
   } catch (err) {
-    console.error("FULL ERROR:", err);
-    throw err;
+    const publicError = toGeminiPublicError(err);
+    const error = new Error(publicError.message);
+    error.statusCode = publicError.statusCode;
+    error.publicMessage = publicError.message;
+    console.error("Gemini chat failed:", publicError.message);
+    throw error;
   }
 }
 
@@ -79,15 +125,7 @@ async function generatePlaceContent(place) {
     }
   }
 
-  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
-  if (!apiKey || apiKey === "your_api_key_here") {
-    throw new Error("Gemini API key is not configured.");
-  }
-
-  const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({
-    model: MODEL_NAME
-  });
+  const model = getGeminiModel();
   console.log("Using model:", MODEL_NAME);
   const prompt = `You are a smart travel guide.
 
@@ -103,10 +141,21 @@ Return only JSON with this shape:
   "facts": ["fact one", "fact two", "fact three"]
 }`;
 
-  const result = await model.generateContent(prompt);
-  const rawText = result.response.text().trim();
-  const jsonText = rawText.replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```$/i, "").trim();
-  const generated = JSON.parse(jsonText);
+  let generated;
+
+  try {
+    const result = await model.generateContent(prompt);
+    const rawText = result.response.text().trim();
+    const jsonText = rawText.replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```$/i, "").trim();
+    generated = JSON.parse(jsonText);
+  } catch (err) {
+    const publicError = toGeminiPublicError(err);
+    const error = new Error(publicError.message);
+    error.statusCode = publicError.statusCode;
+    error.publicMessage = publicError.message;
+    console.error("Gemini place content failed:", publicError.message);
+    throw error;
+  }
 
   return {
     description: generated.description || "",
@@ -187,6 +236,9 @@ async function syncChatSessionToVectorDb(session) {
 }
 
 module.exports = {
+  getGeminiApiKey,
+  getGeminiModel,
+  toGeminiPublicError,
   generateChatReply,
   generatePlaceContent,
   estimateTripCost,

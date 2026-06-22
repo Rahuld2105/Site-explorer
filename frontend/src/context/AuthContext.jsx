@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
-import { getMe, logout } from '../api/authApi';
+import { getMe, logout as logoutRequest } from '../api/authApi';
 import { extractData } from '../api/responseUtils';
 
 const AuthContext = createContext(null);
@@ -75,7 +75,7 @@ export function AuthProvider({ children }) {
   const logout = async () => {
     try {
       if (token) {
-        await logout();
+        await logoutRequest();
       }
     } catch (error) {
       // Local logout still proceeds.

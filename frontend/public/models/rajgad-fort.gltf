@@ -1,0 +1,584 @@
+{
+  "asset": {
+    "version": "2.0",
+    "generator": "TourVision local AR placeholder generator"
+  },
+  "scene": 0,
+  "scenes": [
+    {
+      "nodes": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "name": "terrain-base",
+      "mesh": 2,
+      "translation": [
+        0,
+        -0.12,
+        0
+      ],
+      "scale": [
+        3.8,
+        0.18,
+        2.9
+      ],
+      "extras": {
+        "pieceIndex": 0
+      }
+    },
+    {
+      "name": "main-courtyard",
+      "mesh": 1,
+      "translation": [
+        0,
+        0.08,
+        0
+      ],
+      "scale": [
+        2.7,
+        0.18,
+        1.85
+      ],
+      "extras": {
+        "pieceIndex": 1
+      }
+    },
+    {
+      "name": "front-wall",
+      "mesh": 0,
+      "translation": [
+        0,
+        0.35,
+        0.95
+      ],
+      "scale": [
+        2.9,
+        0.45,
+        0.16
+      ],
+      "extras": {
+        "pieceIndex": 2
+      }
+    },
+    {
+      "name": "rear-wall",
+      "mesh": 0,
+      "translation": [
+        0,
+        0.35,
+        -0.95
+      ],
+      "scale": [
+        2.9,
+        0.45,
+        0.16
+      ],
+      "extras": {
+        "pieceIndex": 3
+      }
+    },
+    {
+      "name": "left-wall",
+      "mesh": 0,
+      "translation": [
+        -1.45,
+        0.35,
+        0
+      ],
+      "scale": [
+        0.16,
+        0.45,
+        1.95
+      ],
+      "extras": {
+        "pieceIndex": 4
+      }
+    },
+    {
+      "name": "right-wall",
+      "mesh": 0,
+      "translation": [
+        1.45,
+        0.35,
+        0
+      ],
+      "scale": [
+        0.16,
+        0.45,
+        1.95
+      ],
+      "extras": {
+        "pieceIndex": 5
+      }
+    },
+    {
+      "name": "main-gate",
+      "mesh": 4,
+      "translation": [
+        0,
+        0.42,
+        1.05
+      ],
+      "scale": [
+        0.55,
+        0.58,
+        0.18
+      ],
+      "extras": {
+        "pieceIndex": 6
+      }
+    },
+    {
+      "name": "gate-arch",
+      "mesh": 5,
+      "translation": [
+        0,
+        0.82,
+        1.08
+      ],
+      "scale": [
+        0.72,
+        0.16,
+        0.22
+      ],
+      "extras": {
+        "pieceIndex": 7
+      }
+    },
+    {
+      "name": "north-west-bastion",
+      "mesh": 0,
+      "translation": [
+        -1.45,
+        0.55,
+        -0.95
+      ],
+      "scale": [
+        0.5,
+        0.85,
+        0.5
+      ],
+      "extras": {
+        "pieceIndex": 8
+      }
+    },
+    {
+      "name": "north-east-bastion",
+      "mesh": 0,
+      "translation": [
+        1.45,
+        0.55,
+        -0.95
+      ],
+      "scale": [
+        0.5,
+        0.85,
+        0.5
+      ],
+      "extras": {
+        "pieceIndex": 9
+      }
+    },
+    {
+      "name": "south-west-bastion",
+      "mesh": 0,
+      "translation": [
+        -1.45,
+        0.55,
+        0.95
+      ],
+      "scale": [
+        0.5,
+        0.85,
+        0.5
+      ],
+      "extras": {
+        "pieceIndex": 10
+      }
+    },
+    {
+      "name": "south-east-bastion",
+      "mesh": 0,
+      "translation": [
+        1.45,
+        0.55,
+        0.95
+      ],
+      "scale": [
+        0.5,
+        0.85,
+        0.5
+      ],
+      "extras": {
+        "pieceIndex": 11
+      }
+    },
+    {
+      "name": "inner-shrine",
+      "mesh": 5,
+      "translation": [
+        -0.45,
+        0.35,
+        -0.15
+      ],
+      "scale": [
+        0.58,
+        0.52,
+        0.46
+      ],
+      "extras": {
+        "pieceIndex": 12
+      }
+    },
+    {
+      "name": "water-tank",
+      "mesh": 6,
+      "translation": [
+        0.62,
+        0.17,
+        -0.25
+      ],
+      "scale": [
+        0.8,
+        0.12,
+        0.55
+      ],
+      "extras": {
+        "pieceIndex": 13
+      }
+    },
+    {
+      "name": "lookout-step-1",
+      "mesh": 1,
+      "translation": [
+        -0.95,
+        0.18,
+        0.45
+      ],
+      "scale": [
+        0.65,
+        0.16,
+        0.42
+      ],
+      "extras": {
+        "pieceIndex": 14
+      }
+    },
+    {
+      "name": "lookout-step-2",
+      "mesh": 1,
+      "translation": [
+        -0.95,
+        0.36,
+        0.45
+      ],
+      "scale": [
+        0.45,
+        0.16,
+        0.32
+      ],
+      "extras": {
+        "pieceIndex": 15
+      }
+    },
+    {
+      "name": "sahyadri-ridge-left",
+      "mesh": 3,
+      "translation": [
+        -1.3,
+        -0.02,
+        1.45
+      ],
+      "scale": [
+        1.4,
+        0.26,
+        0.38
+      ],
+      "extras": {
+        "pieceIndex": 16
+      }
+    },
+    {
+      "name": "sahyadri-ridge-right",
+      "mesh": 3,
+      "translation": [
+        1.1,
+        -0.03,
+        1.38
+      ],
+      "scale": [
+        1.7,
+        0.22,
+        0.36
+      ],
+      "extras": {
+        "pieceIndex": 17
+      }
+    }
+  ],
+  "meshes": [
+    {
+      "name": "box-material-0",
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 0,
+            "NORMAL": 1
+          },
+          "indices": 2,
+          "material": 0
+        }
+      ]
+    },
+    {
+      "name": "box-material-1",
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 0,
+            "NORMAL": 1
+          },
+          "indices": 2,
+          "material": 1
+        }
+      ]
+    },
+    {
+      "name": "box-material-2",
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 0,
+            "NORMAL": 1
+          },
+          "indices": 2,
+          "material": 2
+        }
+      ]
+    },
+    {
+      "name": "box-material-3",
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 0,
+            "NORMAL": 1
+          },
+          "indices": 2,
+          "material": 3
+        }
+      ]
+    },
+    {
+      "name": "box-material-4",
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 0,
+            "NORMAL": 1
+          },
+          "indices": 2,
+          "material": 4
+        }
+      ]
+    },
+    {
+      "name": "box-material-5",
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 0,
+            "NORMAL": 1
+          },
+          "indices": 2,
+          "material": 5
+        }
+      ]
+    },
+    {
+      "name": "box-material-6",
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 0,
+            "NORMAL": 1
+          },
+          "indices": 2,
+          "material": 6
+        }
+      ]
+    }
+  ],
+  "materials": [
+    {
+      "name": "tourvision-material-0",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.43,
+          0.35,
+          0.27,
+          1
+        ],
+        "metallicFactor": 0,
+        "roughnessFactor": 0.82
+      }
+    },
+    {
+      "name": "tourvision-material-1",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.57,
+          0.48,
+          0.37,
+          1
+        ],
+        "metallicFactor": 0,
+        "roughnessFactor": 0.82
+      }
+    },
+    {
+      "name": "tourvision-material-2",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.24,
+          0.38,
+          0.28,
+          1
+        ],
+        "metallicFactor": 0,
+        "roughnessFactor": 0.82
+      }
+    },
+    {
+      "name": "tourvision-material-3",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.13,
+          0.2,
+          0.17,
+          1
+        ],
+        "metallicFactor": 0,
+        "roughnessFactor": 0.82
+      }
+    },
+    {
+      "name": "tourvision-material-4",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.74,
+          0.28,
+          0.15,
+          1
+        ],
+        "metallicFactor": 0,
+        "roughnessFactor": 0.82
+      }
+    },
+    {
+      "name": "tourvision-material-5",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.9,
+          0.72,
+          0.38,
+          1
+        ],
+        "metallicFactor": 0,
+        "roughnessFactor": 0.82
+      }
+    },
+    {
+      "name": "tourvision-material-6",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.15,
+          0.3,
+          0.45,
+          1
+        ],
+        "metallicFactor": 0,
+        "roughnessFactor": 0.82
+      }
+    }
+  ],
+  "accessors": [
+    {
+      "bufferView": 0,
+      "byteOffset": 0,
+      "componentType": 5126,
+      "count": 24,
+      "type": "VEC3",
+      "min": [
+        -0.5,
+        -0.5,
+        -0.5
+      ],
+      "max": [
+        0.5,
+        0.5,
+        0.5
+      ]
+    },
+    {
+      "bufferView": 1,
+      "byteOffset": 0,
+      "componentType": 5126,
+      "count": 24,
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 2,
+      "byteOffset": 0,
+      "componentType": 5123,
+      "count": 36,
+      "type": "SCALAR"
+    }
+  ],
+  "bufferViews": [
+    {
+      "buffer": 0,
+      "byteOffset": 0,
+      "byteLength": 288,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 288,
+      "byteLength": 288,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 576,
+      "byteLength": 72,
+      "target": 34963
+    }
+  ],
+  "buffers": [
+    {
+      "uri": "data:application/octet-stream;base64,AAAAvwAAAL8AAAA/AAAAPwAAAL8AAAA/AAAAPwAAAD8AAAA/AAAAvwAAAD8AAAA/AAAAPwAAAL8AAAC/AAAAvwAAAL8AAAC/AAAAvwAAAD8AAAC/AAAAPwAAAD8AAAC/AAAAvwAAAD8AAAA/AAAAPwAAAD8AAAA/AAAAPwAAAD8AAAC/AAAAvwAAAD8AAAC/AAAAvwAAAL8AAAC/AAAAPwAAAL8AAAC/AAAAPwAAAL8AAAA/AAAAvwAAAL8AAAA/AAAAPwAAAL8AAAA/AAAAPwAAAL8AAAC/AAAAPwAAAD8AAAC/AAAAPwAAAD8AAAA/AAAAvwAAAL8AAAC/AAAAvwAAAL8AAAA/AAAAvwAAAD8AAAA/AAAAvwAAAD8AAAC/AAAAAAAAAAAAAIA/AAAAAAAAAAAAAIA/AAAAAAAAAAAAAIA/AAAAAAAAAAAAAIA/AAAAAAAAAAAAAIC/AAAAAAAAAAAAAIC/AAAAAAAAAAAAAIC/AAAAAAAAAAAAAIC/AAAAAAAAgD8AAAAAAAAAAAAAgD8AAAAAAAAAAAAAgD8AAAAAAAAAAAAAgD8AAAAAAAAAAAAAgL8AAAAAAAAAAAAAgL8AAAAAAAAAAAAAgL8AAAAAAAAAAAAAgL8AAAAAAACAPwAAAAAAAAAAAACAPwAAAAAAAAAAAACAPwAAAAAAAAAAAACAPwAAAAAAAAAAAACAvwAAAAAAAAAAAACAvwAAAAAAAAAAAACAvwAAAAAAAAAAAACAvwAAAAAAAAAAAAABAAIAAAACAAMABAAFAAYABAAGAAcACAAJAAoACAAKAAsADAANAA4ADAAOAA8AEAARABIAEAASABMAFAAVABYAFAAWABcA",
+      "byteLength": 648
+    }
+  ]
+}

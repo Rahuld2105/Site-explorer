@@ -5,6 +5,15 @@ import { extractData, extractMessage } from '../../api/responseUtils';
 import ChatMessage from './ChatMessage';
 import Loader from '../common/Loader';
 
+const QUICK_ACTIONS = [
+  'Tell me history',
+  'Best time to visit',
+  'Nearby hotels',
+  'Nearby restaurants',
+  'Route information',
+  'Trek difficulty'
+];
+
 /**
  * Floating global AI chat surface with contextual place-aware messaging.
  */
@@ -75,14 +84,12 @@ export default function ChatWindow({ contextPlaceId, isOpen, onClose }) {
     }, 18);
   };
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-
-    if (!input.trim()) {
+  const sendChatMessage = async (message) => {
+    if (!message.trim()) {
       return;
     }
 
-    const outgoingMessage = input.trim();
+    const outgoingMessage = message.trim();
     setMessages((current) => [
       ...current,
       {
@@ -123,6 +130,11 @@ export default function ChatWindow({ contextPlaceId, isOpen, onClose }) {
     }
   };
 
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    await sendChatMessage(input);
+  };
+
   if (!isOpen) {
     return null;
   }
@@ -149,6 +161,19 @@ export default function ChatWindow({ contextPlaceId, isOpen, onClose }) {
         </div>
 
         <form className="border-t border-slate-700/80 bg-slate-950 p-4" onSubmit={handleSubmit}>
+          <div className="mb-3 flex gap-2 overflow-x-auto pb-1">
+            {QUICK_ACTIONS.map((action) => (
+              <button
+                key={action}
+                type="button"
+                className="shrink-0 rounded-full border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs font-bold text-slate-200 transition hover:border-teal-400 hover:text-teal-200 disabled:cursor-wait disabled:opacity-60"
+                disabled={loading}
+                onClick={() => sendChatMessage(action)}
+              >
+                {action}
+              </button>
+            ))}
+          </div>
           <textarea
             className="field min-h-22 resize-none bg-slate-900 text-white border-slate-700 placeholder:text-slate-500"
             placeholder="Ask about the current place, routes, budgets, or nearby recommendations..."

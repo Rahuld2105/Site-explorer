@@ -265,49 +265,53 @@ export default function App() {
             </LazyPage>
           }
         />
-        <Route
-          path="/trip-planner"
-          element={
-            <PageErrorBoundary title="Trip Planner Error">
-              <LazyPage>
-                <TripPlannerPage />
-              </LazyPage>
-            </PageErrorBoundary>
-          }
-        />
+        <Route element={<ProtectedRoute />}>
+          <Route
+            path="/trip-planner"
+            element={
+              <PageErrorBoundary title="Trip Planner Error">
+                <LazyPage>
+                  <TripPlannerPage />
+                </LazyPage>
+              </PageErrorBoundary>
+            }
+          />
+        </Route>
         <Route path="/expenses" element={<Navigate replace to="/trips" />} />
-        <Route
-          path="/trips"
-          element={
-            <LazyPage>
-              <TripsPage />
-            </LazyPage>
-          }
-        />
-        <Route
-          path="/trips/:id"
-          element={
-            <LazyPage>
-              <TripDetailsPage />
-            </LazyPage>
-          }
-        />
-        <Route
-          path="/saved"
-          element={
-            <LazyPage>
-              <SavedPage />
-            </LazyPage>
-          }
-        />
-        <Route
-          path="/profile"
-          element={
-            <LazyPage>
-              <ProfilePage />
-            </LazyPage>
-          }
-        />
+        <Route element={<ProtectedRoute />}>
+          <Route
+            path="/trips"
+            element={
+              <LazyPage>
+                <TripsPage />
+              </LazyPage>
+            }
+          />
+          <Route
+            path="/trips/:id"
+            element={
+              <LazyPage>
+                <TripDetailsPage />
+              </LazyPage>
+            }
+          />
+          <Route
+            path="/saved"
+            element={
+              <LazyPage>
+                <SavedPage />
+              </LazyPage>
+            }
+          />
+          <Route
+            path="/profile"
+            element={
+              <LazyPage>
+                <ProfilePage />
+              </LazyPage>
+            }
+          />
+        </Route>
 
         <Route element={<ProtectedRoute />}>
           <Route

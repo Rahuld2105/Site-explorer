@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import PropTypes from 'prop-types';
 import { useParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { checkGeofence, getAiContent, getPlaceById } from '../api/placeApi';
@@ -16,54 +17,105 @@ import {
   PlaceMobileActionBar
 } from '../components/place';
 import { useLocationContext } from '../context/LocationContext';
+import { clonePlaceContent, findPlaceContent } from '../content/placeContent';
 import { useGeofence } from '../hooks/useGeofence';
 import { resolvePlaceImage } from '../utils/placeImages';
 
 const TABS = ['Overview', 'AR Tour', 'AI Guide', 'Nearby'];
+const WEATHER_ALERTS = [
+  { label: 'Rain warning', match: (place) => /fort|trek|hill|mountain/i.test(`${place?.category} ${place?.best_for}`), tone: 'amber' },
+  { label: 'Heat warning', match: (place) => !/monsoon|waterfall/i.test(`${place?.best_for} ${place?.description}`), tone: 'rose' },
+  { label: 'Visibility warning', match: (place) => /fort|view|hill|mountain/i.test(`${place?.category} ${place?.best_for}`), tone: 'sky' }
+];
 
-const RAJGAD_PLACE_DATA = {
-  id: 'rajgad',
-  place_id: 'rajgad',
-  name: 'Rajgad Fort',
-  location_name: 'Pune, Maharashtra',
-  category: 'Historic Fort',
-  description:
-    'Rajgad was the capital of Chhatrapati Shivaji Maharaj for many years. It is one of the most important forts in Maratha history and offers breathtaking views of the Sahyadri mountains.',
-  best_for: 'History walks, fort trekking, Maratha heritage, and Sahyadri viewpoints',
-  rating: 4.7,
-  review_count: 3200,
-  price: 0,
-  entry_fee: 0,
-  score: 9.2,
-  has_ar: true,
-  has_ai_content: true,
-  ai_content_available: true,
-  image: '/images/rajgad-fort.jpg',
-  gallery: [],
-  images: ['/images/rajgad-fort.jpg', '/images/chor-darwaza.jpg', '/images/padmavati-talav.jpg'],
-  sections: [
-    {
-      id: 'overview',
-      title: 'Overview',
-      content:
-        'Rajgad was the capital of Chhatrapati Shivaji Maharaj for many years. It is one of the most important forts in Maratha history and offers breathtaking views of the Sahyadri mountains.',
-      image: '/images/rajgad-fort.jpg'
+function buildSmartAlerts(place) {
+  const distanceKm = Number(place?.distance || place?.route?.totalDistanceKm || 0);
+  const terrain = String(place?.terrain || place?.category || place?.best_for || '').toLowerCase();
+  const isRoughTerrain = /fort|trek|hill|mountain|ghat|trail/.test(terrain);
+  const longTravel = distanceKm > 80 || /remote|fort|hill/.test(terrain);
+  const weatherAlerts = WEATHER_ALERTS.filter((alert) => alert.match(place));
+  const recommended = [
+    isRoughTerrain ? 'Bike' : 'Sedan',
+    isRoughTerrain || longTravel ? 'SUV' : 'Bike'
+  ];
+  const caution = isRoughTerrain ? ['Sedan'] : longTravel ? ['Bike'] : [];
+
+  return {
+    route: [
+      ...(longTravel ? ['Long travel duration'] : []),
+      ...(/pune|mumbai|city|urban/i.test(`${place?.location_name} ${place?.city} ${place?.terrain}`) ? ['Traffic warning'] : [])
+    ],
+    vehicles: {
+      caution,
+      recommended: [...new Set(recommended)]
     },
-    {
-      id: 'chor-darwaza',
-      title: 'Chor Darwaza',
-      content:
-        'Chor Darwaza is a secret entrance used for hidden movement and strategic escape during wartime. It reflects the smart military planning of the Marathas.',
-      image: '/images/chor-darwaza.jpg'
-    },
-    {
-      id: 'padmavati-talav',
-      title: 'Padmavati Talav',
-      content:
-        'Padmavati Talav is a water reservoir that was used by soldiers and residents of the fort. It ensured water availability throughout the year.',
-      image: '/images/padmavati-talav.jpg'
-    }
-  ]
+    weather: weatherAlerts
+  };
+}
+
+function SmartAlertsPanel({ place }) {
+  const alerts = buildSmartAlerts(place);
+
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-[var(--shadow-card)]">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="text-sm font-semibold text-slate-900">Smart Tour Alerts</p>
+          <p className="mt-1 text-sm text-[var(--c-text-secondary)]">Weather, route, and vehicle suggestions for this visit.</p>
+        </div>
+        <span className="badge badge-teal">Live-ready</span>
+      </div>
+
+      <div className="mt-5 grid gap-3 md:grid-cols-3">
+        <div className="rounded-xl bg-slate-50 p-4">
+          <p className="text-xs font-black uppercase tracking-[0.12em] text-slate-400">Weather</p>
+          <div className="mt-3 space-y-2">
+            {alerts.weather.map((alert) => (
+              <p key={alert.label} className="text-sm font-bold text-slate-700">{alert.label}</p>
+            ))}
+          </div>
+        </div>
+        <div className="rounded-xl bg-slate-50 p-4">
+          <p className="text-xs font-black uppercase tracking-[0.12em] text-slate-400">Route</p>
+          <div className="mt-3 space-y-2">
+            {(alerts.route.length ? alerts.route : ['Route looks comfortable']).map((alert) => (
+              <p key={alert} className="text-sm font-bold text-slate-700">{alert}</p>
+            ))}
+          </div>
+        </div>
+        <div className="rounded-xl bg-slate-50 p-4">
+          <p className="text-xs font-black uppercase tracking-[0.12em] text-slate-400">Vehicles</p>
+          <div className="mt-3 space-y-2">
+            {alerts.vehicles.recommended.map((vehicle) => (
+              <p key={vehicle} className="text-sm font-bold text-emerald-700">Recommended: {vehicle}</p>
+            ))}
+            {alerts.vehicles.caution.map((vehicle) => (
+              <p key={vehicle} className="text-sm font-bold text-amber-700">Caution: {vehicle}</p>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+SmartAlertsPanel.propTypes = {
+  place: PropTypes.shape({
+    best_for: PropTypes.string,
+    category: PropTypes.string,
+    city: PropTypes.string,
+    description: PropTypes.string,
+    distance: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+    location_name: PropTypes.string,
+    route: PropTypes.shape({
+      totalDistanceKm: PropTypes.oneOfType([PropTypes.number, PropTypes.string])
+    }),
+    terrain: PropTypes.string
+  })
+};
+
+SmartAlertsPanel.defaultProps = {
+  place: null
 };
 
 const isRajgadId = (value) => String(value || '').toLowerCase() === 'rajgad';
@@ -76,23 +128,16 @@ const isRajgadPlace = (place) => {
   return identifiers.some((value) => value === 'rajgad' || value.includes('rajgad'));
 };
 
-const getRajgadPlace = () => ({
-  ...RAJGAD_PLACE_DATA,
-  images: [...RAJGAD_PLACE_DATA.images],
-  sections: RAJGAD_PLACE_DATA.sections.map((section) => ({ ...section })),
-  ai_content: {
-    description: RAJGAD_PLACE_DATA.description,
-    summary: RAJGAD_PLACE_DATA.sections[0].content,
-    images: [...RAJGAD_PLACE_DATA.images]
-  }
-});
+const getRajgadPlace = () => clonePlaceContent(findPlaceContent('rajgad'));
 
 const createGuideSections = (place) => {
-  if (isRajgadPlace(place)) {
+  const managedContent = findPlaceContent(place?.place_id || place?.id || place?.slug || place?.name);
+
+  if (managedContent) {
     return {
-      id: RAJGAD_PLACE_DATA.id,
-      image: RAJGAD_PLACE_DATA.image,
-      sections: RAJGAD_PLACE_DATA.sections
+      id: managedContent.id,
+      image: managedContent.image,
+      sections: managedContent.sections
     };
   }
 
@@ -164,8 +209,9 @@ export default function PlacePage() {
   const isInsideLocal = useGeofence(place?.geofence_polygon, location);
   const isInsideGeofence = useMemo(() => insideFromServer ?? isInsideLocal, [insideFromServer, isInsideLocal]);
   const gallery = useMemo(() => {
-    if (isRajgadPlace(place)) {
-      return [RAJGAD_PLACE_DATA.image];
+    const managedContent = findPlaceContent(place?.place_id || place?.id || place?.slug || place?.name);
+    if (managedContent?.image) {
+      return [managedContent.image, ...(managedContent.images || []).filter((image) => image !== managedContent.image)];
     }
 
     const images = aiContent?.images || place?.images || [];
@@ -285,11 +331,13 @@ export default function PlacePage() {
         }
 
         setPlace(nextPlace);
-        if (isRajgadPlace(nextPlace)) {
-          setAiContent(getRajgadPlace().ai_content);
+        const managedContent = clonePlaceContent(findPlaceContent(nextPlace?.place_id || nextPlace?.id || nextPlace?.slug || nextPlace?.name));
+        if (managedContent) {
+          setPlace({ ...managedContent, ...nextPlace, sections: managedContent.sections });
+          setAiContent(managedContent.ai_content);
         }
 
-        if (!isRajgadPlace(nextPlace) && (nextPlace?.has_ai_content || nextPlace?.ai_content_available)) {
+        if (!managedContent && (nextPlace?.has_ai_content || nextPlace?.ai_content_available)) {
           try {
             const aiResponse = await getAiContent(id);
             if (!isMounted) {
@@ -306,12 +354,13 @@ export default function PlacePage() {
         }
       } catch (fetchError) {
         if (isMounted) {
-          if (isRajgadId(id)) {
-            const rajgadPlace = getRajgadPlace();
-            setPlace(rajgadPlace);
-            setAiContent(rajgadPlace.ai_content);
-            setActiveGuideSectionId('overview');
-            setCaptions(rajgadPlace.sections[0].content);
+          const localContent = clonePlaceContent(findPlaceContent(id));
+          if (localContent || isRajgadId(id)) {
+            const fallbackPlace = localContent || getRajgadPlace();
+            setPlace(fallbackPlace);
+            setAiContent(fallbackPlace.ai_content);
+            setActiveGuideSectionId(fallbackPlace.sections[0]?.id || 'overview');
+            setCaptions(fallbackPlace.sections[0]?.content || fallbackPlace.description);
             setError('');
           } else {
             setError(extractMessage(fetchError, 'Unable to load this place.'));
@@ -566,6 +615,8 @@ export default function PlacePage() {
                 </div>
               )}
             </div>
+
+            <SmartAlertsPanel place={place} />
 
             <PlaceTabs activeTab={activeTab} setActiveTab={setActiveTab} tabs={TABS} />
 

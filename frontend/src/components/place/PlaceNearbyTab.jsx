@@ -32,18 +32,52 @@ const FALLBACK_NEARBY = [
   }
 ];
 
+function createServiceRecommendations() {
+  return [
+    { id: 'hotel-1', name: 'Heritage Stay', category: 'Hotels', distance: 1.2, rating: 4.5 },
+    { id: 'restaurant-1', name: 'Green Thali House', category: 'Restaurants', distance: 0.8, rating: 4.6, tags: ['Vegetarian'] },
+    { id: 'fuel-1', name: 'HP Fuel Point', category: 'Fuel Stations', distance: 2.1, rating: 4.3, tags: ['Petrol', 'Diesel'] },
+    { id: 'hospital-1', name: 'City Care Hospital', category: 'Hospitals', distance: 2.8, rating: 4.1 }
+  ];
+}
+
 /**
  * Nearby experiences tab showing nearby places in grid.
  */
 export default function PlaceNearbyTab({ nearbyPlaces }) {
   const navigate = useNavigate();
   const places = nearbyPlaces || FALLBACK_NEARBY;
+  const services = createServiceRecommendations();
 
   return (
     <div>
       <div className="mb-5 flex items-center justify-between">
         <h3>Nearby experiences</h3>
         <span className="urgency-tag">42 people exploring this today</span>
+      </div>
+      <div className="mb-8 grid gap-3 md:grid-cols-2">
+        {services.map((service) => (
+          <article key={service.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-[var(--shadow-card)]">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.12em] text-teal-700">{service.category}</p>
+                <h4 className="mt-1 text-lg font-black text-slate-950">{service.name}</h4>
+                <p className="mt-1 text-sm font-semibold text-slate-500">
+                  {service.distance.toFixed(1)} km away - Rating {service.rating.toFixed(1)}
+                </p>
+                {service.tags?.length ? <p className="mt-1 text-xs font-bold text-slate-400">{service.tags.join(', ')}</p> : null}
+              </div>
+              <a
+                className="rounded-full bg-slate-950 px-3 py-1.5 text-xs font-black text-white"
+                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(service.name)}`}
+                rel="noreferrer"
+                target="_blank"
+              >
+                Directions
+              </a>
+            </div>
+          </article>
+        ))}
       </div>
       <div className="grid gap-x-6 gap-y-10 md:grid-cols-2">
         {places.map((item) => (

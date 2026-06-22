@@ -3,6 +3,32 @@ import ARViewer from '../ar/ARViewer';
 import AROverlay from '../ar/AROverlay';
 import AudioPlayer from '../common/AudioPlayer';
 
+const LOCAL_AR_MODELS = {
+  rajgad: '/models/rajgad-fort.gltf',
+  'rajgad-fort': '/models/rajgad-fort.gltf',
+  sinhagad: '/models/sinhagad-fort.gltf',
+  'sinhagad-fort': '/models/sinhagad-fort.gltf',
+  'shaniwar-wada': '/models/shaniwar-wada.gltf'
+};
+
+function normalizePlaceKey(value) {
+  return String(value || '').toLowerCase().trim().replace(/\s+/g, '-');
+}
+
+function resolveARModelUrl(aiContent, place) {
+  const directUrl = aiContent?.ar_model_url || place?.ar_model_url;
+
+  if (directUrl) {
+    return directUrl;
+  }
+
+  const keys = [place?.place_id, place?.id, place?.slug, place?.name]
+    .map(normalizePlaceKey)
+    .filter(Boolean);
+
+  return keys.map((key) => LOCAL_AR_MODELS[key]).find(Boolean) || '';
+}
+
 /**
  * Full place information block with AI media, AR view, and narrated captioning.
  */
@@ -16,6 +42,7 @@ export default function PlaceDetail({
   place
 }) {
   const gallery = aiContent?.images || place?.images || [];
+  const arModelUrl = resolveARModelUrl(aiContent, place);
 
   return (
     <div className="grid gap-6 xl:grid-cols-[1.08fr_0.92fr]">
@@ -86,8 +113,9 @@ export default function PlaceDetail({
 
           <ARViewer
             alt={`${place?.name || 'Place'} AR model`}
+            iosSrc={aiContent?.ar_ios_model_url || aiContent?.ios_model_url || place?.ar_ios_model_url || place?.ios_model_url}
             poster={gallery[0]}
-            src={aiContent?.ar_model_url || place?.ar_model_url}
+            src={arModelUrl}
           />
 
           <div className="mt-4">
@@ -145,9 +173,11 @@ export default function PlaceDetail({
 PlaceDetail.propTypes = {
   aiContent: PropTypes.shape({
     ai_video_url: PropTypes.string,
+    ar_ios_model_url: PropTypes.string,
     ar_model_url: PropTypes.string,
     description: PropTypes.string,
     images: PropTypes.arrayOf(PropTypes.string),
+    ios_model_url: PropTypes.string,
     summary: PropTypes.string,
     tts_audio: PropTypes.string
   }),
@@ -158,11 +188,13 @@ PlaceDetail.propTypes = {
   onStartTour: PropTypes.func.isRequired,
   place: PropTypes.shape({
     ar_model_url: PropTypes.string,
+    ar_ios_model_url: PropTypes.string,
     best_for: PropTypes.string,
     category: PropTypes.string,
     description: PropTypes.string,
     hours: PropTypes.string,
     images: PropTypes.arrayOf(PropTypes.string),
+    ios_model_url: PropTypes.string,
     name: PropTypes.string,
     rating: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
     type: PropTypes.string

@@ -1,5 +1,7 @@
 const jwt = require("jsonwebtoken");
 
+const Expense = require("../models/Expense");
+const Trip = require("../models/Trip");
 const User = require("../models/User");
 const { failure, success } = require("../utils/response");
 
@@ -73,6 +75,40 @@ async function getMe(req, res) {
   });
 }
 
+async function getProfileDashboard(req, res) {
+  const userId = req.user?._id;
+  const [trips, expenses] = await Promise.all([
+    Trip.find({ user: userId }).sort({ createdAt: -1 }),
+    Expense.find({ user: userId }).sort({ createdAt: -1 })
+  ]);
+
+  const completedTrips = trips.filter((trip) => trip.status === "completed");
+  const uploadedMedia = trips.flatMap((trip) =>
+    (trip.stories || []).map((story) => ({
+      ...(story.toObject?.() || story),
+      trip_id: trip._id.toString(),
+      trip_name: trip.destinations?.map((item) => item.name).join(" -> ") || "Trip"
+    }))
+  );
+
+  return success(res, {
+    dashboard: {
+      places_visited: completedTrips.flatMap((trip) => trip.destinations || []).map((item) => item.name),
+      trips_completed: completedTrips.length,
+      expenses_total: expenses.reduce((sum, expense) => sum + Number(expense.amount || 0), 0),
+      uploaded_memories: uploadedMedia.length,
+      saved_trips: req.account?.saved_trips || [],
+      trip_history: trips.map((trip) => ({
+        id: trip._id,
+        name: trip.destinations?.map((item) => item.name).join(" -> ") || "Trip",
+        status: trip.status,
+        completed_at: trip.status === "completed" ? trip.updatedAt : null
+      })),
+      uploaded_media: uploadedMedia
+    }
+  });
+}
+
 async function logout(req, res) {
   return success(res, {
     message: "Logged out successfully."
@@ -81,6 +117,7 @@ async function logout(req, res) {
 
 module.exports = {
   getMe,
+  getProfileDashboard,
   login,
   logout,
   signup

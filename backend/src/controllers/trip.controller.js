@@ -269,6 +269,19 @@ const uploadTravelStory = asyncHandler(async (req, res) => {
     await trip.save();
   }
 
+  if (req.account) {
+    req.account.uploaded_media.push(
+      ...stories.map((story) => ({
+        trip: trip?._id || null,
+        trip_id: tripId || "",
+        media_url: story.file_url,
+        mime_type: story.mime_type,
+        original_name: story.original_name
+      }))
+    );
+    await req.account.save();
+  }
+
   return success(
     res,
     {

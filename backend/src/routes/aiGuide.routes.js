@@ -1,31 +1,17 @@
 const express = require("express");
 require("dotenv").config();
-const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 const asyncHandler = require("../utils/asyncHandler");
+const { getGeminiApiKey, getGeminiModel, toGeminiPublicError } = require("../services/aiContent.service");
 
 const router = express.Router();
-const MODEL_NAME = "models/gemini-flash-latest";
+const MODEL_NAME = process.env.GEMINI_MODEL || "models/gemini-flash-latest";
 
 console.log("KEY:", process.env.GEMINI_API_KEY ? "FOUND" : "MISSING");
 console.log("MODEL:", MODEL_NAME);
 
-function getGeminiModel() {
-  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
-  const genAI = new GoogleGenerativeAI(apiKey);
-
-  return genAI.getGenerativeModel({
-    model: MODEL_NAME
-  });
-}
-
 async function listGeminiModels() {
-  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
-  const genAI = new GoogleGenerativeAI(apiKey);
-
-  if (typeof genAI.listModels === "function") {
-    return genAI.listModels();
-  }
+  const apiKey = getGeminiApiKey();
 
   const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
   const models = await response.json();
@@ -43,8 +29,11 @@ router.get("/list-models", async (req, res) => {
     console.log("Gemini Models:", JSON.stringify(models, null, 2));
     return res.json(models);
   } catch (err) {
-    console.error("FULL ERROR:", err);
-    return res.status(500).json({ error: "failed", details: err.message });
+    const publicError = err.publicMessage
+      ? { statusCode: err.statusCode || 503, message: err.publicMessage }
+      : toGeminiPublicError(err);
+    console.error("Gemini model list failed:", publicError.message);
+    return res.status(publicError.statusCode).json({ error: "failed", message: publicError.message });
   }
 });
 
@@ -57,9 +46,11 @@ router.get("/test-gemini", async (req, res) => {
 
     return res.json({ text });
   } catch (err) {
-    console.error("FULL ERROR:", err);
-    console.error("Gemini Error:", err.message);
-    return res.status(500).json({ error: "failed" });
+    const publicError = err.publicMessage
+      ? { statusCode: err.statusCode || 503, message: err.publicMessage }
+      : toGeminiPublicError(err);
+    console.error("Gemini test failed:", publicError.message);
+    return res.status(publicError.statusCode).json({ error: "failed", message: publicError.message });
   }
 });
 
@@ -72,13 +63,6 @@ router.post(
       return res.status(400).json({ message: "place_name and message are required." });
     }
 
-    const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
-    if (!apiKey || apiKey === "your_api_key_here") {
-      return res.status(503).json({
-        message: "Gemini API key is not configured."
-      });
-    }
-
     const model = getGeminiModel();
 
     const prompt = `You are a smart travel guide.
@@ -88,8 +72,18 @@ User query: ${message}
 
 Give helpful, short, engaging response.`;
 
-    const result = await model.generateContent(prompt);
-    const text = result.response.text().trim();
+    let text = "";
+
+    try {
+      const result = await model.generateContent(prompt);
+      text = result.response.text().trim();
+    } catch (err) {
+      const publicError = err.publicMessage
+        ? { statusCode: err.statusCode || 503, message: err.publicMessage }
+        : toGeminiPublicError(err);
+      console.error("Gemini guide failed:", publicError.message);
+      return res.status(publicError.statusCode).json({ message: publicError.message });
+    }
 
     if (!text) {
       return res.status(502).json({ message: "Gemini did not return a response." });

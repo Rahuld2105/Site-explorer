@@ -53,6 +53,7 @@ export function normalizeTrip(trip) {
     endDate: trip?.endDate || '',
     expenses,
     id: trip?.id || String(Date.now()),
+    memories: trip?.memories || trip?.stories || [],
     name: trip?.name || 'Untitled Trip',
     participants,
     pausedAt: trip?.pausedAt || null,

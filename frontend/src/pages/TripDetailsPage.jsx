@@ -307,6 +307,103 @@ function CompletedTripStats({ routePlan, summary, trip }) {
   );
 }
 
+function TripMemories({ onTripUpdate, trip }) {
+  const [isUploading, setIsUploading] = useState(false);
+  const memories = trip.memories || [];
+
+  const handleUpload = async (event) => {
+    const files = Array.from(event.target.files || []);
+
+    if (!files.length) {
+      return;
+    }
+
+    setIsUploading(true);
+
+    const uploaded = await Promise.all(
+      files.map(
+        (file) =>
+          new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+              resolve({
+                id: `memory-${Date.now()}-${file.name}`,
+                mediaUrl: reader.result,
+                mimeType: file.type,
+                name: file.name,
+                tripId: trip.id,
+                uploadedAt: new Date().toISOString()
+              });
+            };
+            reader.readAsDataURL(file);
+          })
+      )
+    );
+
+    onTripUpdate({
+      ...trip,
+      coverImage: trip.coverImage || uploaded.find((item) => item.mimeType.startsWith('image/'))?.mediaUrl || trip.coverImage,
+      memories: [...uploaded, ...memories],
+      updatedAt: new Date().toISOString()
+    });
+    event.target.value = '';
+    setIsUploading(false);
+  };
+
+  const deleteMemory = (memoryId) => {
+    onTripUpdate({
+      ...trip,
+      memories: memories.filter((memory) => memory.id !== memoryId),
+      updatedAt: new Date().toISOString()
+    });
+  };
+
+  return (
+    <section id="trip-memories" className="rounded-3xl border border-white/80 bg-white p-6 shadow-xl shadow-slate-200/70">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-violet-600">Trip Memories</p>
+          <h2 className="mt-2 text-2xl font-black text-slate-950">Photos and videos from this trip</h2>
+          <p className="mt-2 text-sm font-semibold text-slate-500">Stored trip-wise with media URL, trip ID, and upload date.</p>
+        </div>
+        <label className="cursor-pointer rounded-2xl bg-violet-600 px-4 py-2.5 text-sm font-black text-white shadow-lg">
+          {isUploading ? 'Uploading...' : 'Upload Media'}
+          <input className="sr-only" type="file" accept="image/*,video/*" multiple onChange={handleUpload} />
+        </label>
+      </div>
+
+      {memories.length ? (
+        <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {memories.map((memory) => (
+            <article key={memory.id} className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
+              <div className="aspect-video bg-slate-200">
+                {memory.mimeType?.startsWith('video/') ? (
+                  <video className="h-full w-full object-cover" src={memory.mediaUrl} controls />
+                ) : (
+                  <img className="h-full w-full object-cover" src={memory.mediaUrl} alt={memory.name || 'Trip memory'} />
+                )}
+              </div>
+              <div className="p-4">
+                <p className="truncate text-sm font-black text-slate-950">{memory.name || 'Trip media'}</p>
+                <p className="mt-1 text-xs font-semibold text-slate-500">
+                  {new Date(memory.uploadedAt).toLocaleString()} - Trip {memory.tripId}
+                </p>
+                <button type="button" className="mt-3 rounded-xl bg-white px-3 py-1.5 text-xs font-black text-rose-600 shadow-sm" onClick={() => deleteMemory(memory.id)}>
+                  Delete media
+                </button>
+              </div>
+            </article>
+          ))}
+        </div>
+      ) : (
+        <div className="mt-6 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-sm font-bold text-slate-500">
+          Upload photos or videos after completing the trip.
+        </div>
+      )}
+    </section>
+  );
+}
+
 export default function TripDetailsPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -495,6 +592,7 @@ export default function TripDetailsPage() {
           {[
             ['Manage Trip', '#manage-trip'],
             ['Expenses', '#trip-expenses'],
+            ['Trip Memories', '#trip-memories'],
             ['Settlements', '#settlements']
           ].map(([label, href]) => (
             <a key={label} href={href} className="rounded-2xl px-4 py-2.5 text-sm font-black text-slate-600 transition hover:bg-slate-950 hover:text-white">
@@ -543,6 +641,10 @@ export default function TripDetailsPage() {
           <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-bold text-amber-800">
             {locationError} <button type="button" className="underline" onClick={requestLocation}>Try again</button>
           </div>
+        ) : null}
+
+        {trip.status === TRIP_STATUSES.COMPLETED ? (
+          <TripMemories trip={trip} onTripUpdate={handleUpdateTrip} />
         ) : null}
 
         <div id="trip-expenses" className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
