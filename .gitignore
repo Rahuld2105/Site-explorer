@@ -1,0 +1,6 @@
+backend/.env
+frontend/.env
+ml_service/.env
+
+node_modules/
+**/node_modules/
