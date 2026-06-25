@@ -113,6 +113,75 @@ const placeSchema = new mongoose.Schema(
         default: []
       }
     },
+    geofence_radius_meters: {
+      type: Number,
+      default: 200,
+      min: 25
+    },
+    geofence_visits: {
+      type: [
+        {
+          user: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
+            default: null
+          },
+          session_id: {
+            type: String,
+            default: ""
+          },
+          status: {
+            type: String,
+            enum: ["outside", "near", "inside"],
+            default: "outside"
+          },
+          event: {
+            type: String,
+            enum: ["enter", "near", "exit", "check_in"],
+            default: "near"
+          },
+          distance_meters: {
+            type: Number,
+            default: null
+          },
+          radius_meters: {
+            type: Number,
+            default: 200
+          },
+          accuracy_meters: {
+            type: Number,
+            default: null
+          },
+          coordinates: {
+            lat: Number,
+            lng: Number
+          },
+          checked_at: {
+            type: Date,
+            default: Date.now
+          }
+        }
+      ],
+      default: []
+    },
+    visit_stats: {
+      total_checkins: {
+        type: Number,
+        default: 0
+      },
+      total_entries: {
+        type: Number,
+        default: 0
+      },
+      total_exits: {
+        type: Number,
+        default: 0
+      },
+      last_checkin_at: {
+        type: Date,
+        default: null
+      }
+    },
     best_for: {
       type: String,
       default: ""

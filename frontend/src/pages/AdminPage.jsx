@@ -53,7 +53,12 @@ const NAV_ITEMS = [
   'Users',
   'Trips',
   'AI Guide',
-  'QR Codes'
+  'QR Codes',
+  'Analytics',
+  'CMS',
+  'Alerts',
+  'Feedback',
+  'Settings'
 ];
 
 const EMPTY_PLACE_FORM = {
@@ -87,12 +92,12 @@ function AdminSection({ active, children, name }) {
     return null;
   }
 
-  return <div className="space-y-6">{children}</div>;
+  return <div className="admin-section space-y-6">{children}</div>;
 }
 
 function StatCard({ label, value, detail }) {
   return (
-    <article className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+    <article className="admin-stat-card">
       <p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">{label}</p>
       <p className="mt-3 font-heading text-3xl font-extrabold text-slate-950">{value ?? 0}</p>
       <p className="mt-1 text-sm font-semibold text-slate-500">{detail}</p>
@@ -112,7 +117,7 @@ function Field({ as = 'input', label, ...props }) {
 
 function AdminTable({ children, columns, empty }) {
   return (
-    <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+    <div className="admin-table-wrap">
       <div className="overflow-x-auto">
         <table className="min-w-full text-left text-sm">
           <thead className="bg-slate-50 text-xs font-bold uppercase tracking-[0.08em] text-slate-500">
@@ -215,6 +220,9 @@ export default function AdminPage() {
   }, []);
 
   const cards = overview?.cards || {};
+  const activeUsers = users.filter((item) => item.active).length;
+  const criticalAlerts = alerts.filter((item) => item.severity === 'critical').length;
+  const pendingReviews = pendingContent.length + feedback.length;
   const filteredUsers = users.filter((item) =>
     `${item.name || ''} ${item.email || ''}`.toLowerCase().includes(userSearch.toLowerCase())
   );
@@ -410,45 +418,61 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-950">
+    <div className="admin-dashboard min-h-screen text-slate-950">
       <div className="grid min-h-screen lg:grid-cols-[280px_minmax(0,1fr)]">
-        <aside className="border-r border-slate-200 bg-slate-950 text-white">
+        <aside className="admin-sidebar">
           <div className="sticky top-0 p-5">
-            <div className="rounded-lg border border-white/10 bg-white/5 p-4">
+            <div className="admin-brand-card">
               <p className="text-xs font-bold uppercase tracking-[0.16em] text-teal-200">TourVision</p>
               <h1 className="mt-1 text-2xl font-extrabold">Admin</h1>
               <p className="mt-2 text-sm text-slate-300">{user?.name || user?.email}</p>
             </div>
-            <nav className="mt-5 grid grid-cols-2 gap-2 lg:grid-cols-1">
+            <nav className="admin-nav mt-5 grid grid-cols-2 gap-2 lg:grid-cols-1">
               {NAV_ITEMS.map((item) => (
                 <button
                   key={item}
                   type="button"
                   onClick={() => setActive(item)}
-                  className={`rounded-lg px-4 py-3 text-left text-sm font-bold transition ${
-                    active === item ? 'bg-teal-500 text-white' : 'text-slate-300 hover:bg-white/10 hover:text-white'
+                  className={`admin-nav-button ${
+                    active === item ? 'admin-nav-button-active' : ''
                   }`}
                 >
                   {item}
                 </button>
               ))}
             </nav>
-            <button type="button" className="mt-5 w-full rounded-lg border border-white/15 px-4 py-3 text-sm font-bold text-slate-200" onClick={logout}>
+            <button type="button" className="admin-logout" onClick={logout}>
               Logout
             </button>
           </div>
         </aside>
 
         <main className="min-w-0 p-4 sm:p-6 lg:p-8">
-          <header className="mb-6 flex flex-col gap-3 border-b border-slate-200 pb-5 lg:flex-row lg:items-end lg:justify-between">
+          <header className="admin-header mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <p className="text-sm font-bold uppercase tracking-[0.12em] text-teal-700">Tourism Management Platform</p>
-              <h2 className="mt-1 text-3xl font-extrabold">{active}</h2>
+              <h2 className="mt-1 text-3xl font-extrabold sm:text-4xl">{active}</h2>
             </div>
-            <p className="text-sm font-semibold text-slate-500">{new Date().toLocaleString()}</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="badge badge-green">{activeUsers} active users</span>
+              <span className="badge badge-amber">{criticalAlerts} critical alerts</span>
+              <span className="badge badge-teal">{new Date().toLocaleString()}</span>
+            </div>
           </header>
 
           <AdminSection active={active} name="Dashboard">
+            <section className="admin-hero-panel">
+              <div>
+                <span className="badge badge-teal">Operations live</span>
+                <h3>Command center overview</h3>
+                <p>Monitor travelers, heritage places, trips, AI guide content, alerts, feedback, media, and QR performance from one workspace.</p>
+              </div>
+              <div className="admin-hero-metrics">
+                <span><strong>{places.length}</strong> Places</span>
+                <span><strong>{trips.length}</strong> Trips</span>
+                <span><strong>{pendingReviews}</strong> Reviews</span>
+              </div>
+            </section>
             <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
               <StatCard label="Total Users" value={cards.total_users} detail="Registered accounts" />
               <StatCard label="Total Trips Created" value={cards.total_trips} detail={`${cards.active_trips || 0} active trips`} />

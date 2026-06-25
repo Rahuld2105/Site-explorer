@@ -1,8 +1,21 @@
 import PropTypes from 'prop-types';
 import L from 'leaflet';
 import { useEffect } from 'react';
-import { MapContainer, Marker, Polyline, Popup, TileLayer, useMap } from 'react-leaflet';
+import { Circle, MapContainer, Marker, Polyline, Popup, TileLayer, useMap } from 'react-leaflet';
 import PlaceMarker from './PlaceMarker';
+
+const heritageIcon = L.divIcon({
+  className: 'tourvision-heritage-marker',
+  html: `
+    <div class="tourvision-heritage-pin" aria-hidden="true">
+      <span class="tourvision-heritage-pin__roof"></span>
+      <span class="tourvision-heritage-pin__body"></span>
+    </div>
+  `,
+  iconSize: [34, 34],
+  iconAnchor: [17, 30],
+  popupAnchor: [0, -26]
+});
 
 const userIcon = L.divIcon({
   className: 'tourvision-user-marker',
@@ -105,6 +118,7 @@ export default function MapView({
   recenterOnCenterChange,
   onMarkerClick,
   places,
+  geofence,
   routeCoordinates,
   routePanelVisible,
   selectedPlaceId,
@@ -125,6 +139,30 @@ export default function MapView({
 
       <RecenterMap center={center} enabled={recenterOnCenterChange} zoom={zoom} />
       <FitRouteBounds enabled={autoFitRoute} routeCoordinates={routeCoordinates} routePanelVisible={routePanelVisible} />
+
+      {geofence?.center && geofence?.radiusMeters ? (
+        <>
+          <Circle
+            center={[Number(geofence.center.lat), Number(geofence.center.lng)]}
+            radius={Number(geofence.radiusMeters)}
+            pathOptions={{
+              color: geofence.status === 'inside' ? '#059669' : geofence.status === 'near' ? '#d97706' : '#0f766e',
+              fillColor: geofence.status === 'inside' ? '#10b981' : geofence.status === 'near' ? '#f59e0b' : '#14b8a6',
+              fillOpacity: 0.14,
+              opacity: 0.88,
+              weight: 2
+            }}
+          />
+          <Marker icon={heritageIcon} position={[Number(geofence.center.lat), Number(geofence.center.lng)]}>
+            <Popup>
+              <div className="space-y-1">
+                <p className="font-semibold">{geofence.placeName || 'Heritage location'}</p>
+                <p>Geofence radius: {Math.round(geofence.radiusMeters)} m</p>
+              </div>
+            </Popup>
+          </Marker>
+        </>
+      ) : null}
 
       {userLocation ? (
         <Marker icon={userIcon} position={[Number(userLocation.lat), Number(userLocation.lng)]}>
@@ -180,6 +218,15 @@ MapView.propTypes = {
   }).isRequired,
   onMarkerClick: PropTypes.func,
   recenterOnCenterChange: PropTypes.bool,
+  geofence: PropTypes.shape({
+    center: PropTypes.shape({
+      lat: PropTypes.number.isRequired,
+      lng: PropTypes.number.isRequired
+    }),
+    placeName: PropTypes.string,
+    radiusMeters: PropTypes.number,
+    status: PropTypes.string
+  }),
   places: PropTypes.arrayOf(
     PropTypes.shape({
       id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
@@ -203,6 +250,7 @@ MapView.propTypes = {
 
 MapView.defaultProps = {
   autoFitRoute: false,
+  geofence: null,
   onMarkerClick: undefined,
   places: [],
   recenterOnCenterChange: false,

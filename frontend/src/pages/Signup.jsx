@@ -10,22 +10,48 @@ import { useAuth } from '../context/AuthContext';
 /**
  * Shared authentication card container used by signup and login pages.
  */
-function AuthCard({ children, title, subtitle }) {
+function AuthShell({ children }) {
   return (
-    <div className="panel-strong w-full max-w-md p-8">
-      <span className="badge">Create Your Travel Profile</span>
-      <h1 className="mt-4 font-heading text-3xl text-white">{title}</h1>
-      <p className="mt-2 text-sm text-slate-400">{subtitle}</p>
-      <div className="mt-6">{children}</div>
+    <div className="auth-page">
+      <div className="auth-hero" aria-hidden="true">
+        <div className="auth-hero-sun" />
+        <div className="auth-hero-fort">
+          <span className="auth-hero-dome" />
+          <span className="auth-hero-tower auth-hero-tower-left" />
+          <span className="auth-hero-gate" />
+          <span className="auth-hero-tower auth-hero-tower-right" />
+        </div>
+        <div className="auth-hero-path" />
+      </div>
+      <div className="auth-grid">
+        <section className="auth-copy anim-fade-up">
+          <span className="auth-kicker">Create Your Travel Profile</span>
+          <h1>Plan richer visits before you arrive.</h1>
+          <p>Build a TourVision profile for saved routes, nearby discoveries, AI guide history, and smart alerts.</p>
+          <div className="auth-highlights">
+            <span>Heritage guides</span>
+            <span>Smart routes</span>
+            <span>Place alerts</span>
+          </div>
+        </section>
+        {children}
+      </div>
     </div>
   );
 }
 
-AuthCard.propTypes = {
-  children: PropTypes.node.isRequired,
-  subtitle: PropTypes.string.isRequired,
-  title: PropTypes.string.isRequired
+AuthShell.propTypes = {
+  children: PropTypes.node.isRequired
 };
+
+function getPasswordScore(password) {
+  return [
+    password.length >= 8,
+    /[A-Z]/.test(password),
+    /[0-9]/.test(password),
+    /[^A-Za-z0-9]/.test(password)
+  ].filter(Boolean).length;
+}
 
 /**
  * Signup page for new traveler registration.
@@ -39,6 +65,9 @@ export default function Signup() {
     password: ''
   });
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const passwordScore = getPasswordScore(form.password);
+  const strengthLabel = ['Start typing', 'Weak', 'Fair', 'Good', 'Strong'][passwordScore];
 
   if (isAuthenticated) {
     return <Navigate replace to="/" />;
@@ -65,39 +94,58 @@ export default function Signup() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top,_rgba(96,165,250,0.22),_transparent_35%),linear-gradient(180deg,_#08111f_0%,_#0b1930_48%,_#10192c_100%)] px-4 py-12">
-      <AuthCard
-        title="Build your smart travel profile"
-        subtitle="Save nearby recommendations, plan collaborative trips, and unlock place-aware narration."
-      >
+    <AuthShell>
+      <div className="auth-card anim-scale-in">
+        <span className="badge badge-teal">New traveler</span>
+        <h2>Create your account</h2>
+        <p>Start a smarter TourVision journey.</p>
         <form className="space-y-4" onSubmit={handleSubmit}>
-          <input
-            className="field"
-            name="name"
-            type="text"
-            placeholder="Full name"
-            value={form.name}
-            onChange={handleChange}
-            required
-          />
-          <input
-            className="field"
-            name="email"
-            type="email"
-            placeholder="Email address"
-            value={form.email}
-            onChange={handleChange}
-            required
-          />
-          <input
-            className="field"
-            name="password"
-            type="password"
-            placeholder="Create password"
-            value={form.password}
-            onChange={handleChange}
-            required
-          />
+          <label className="auth-field">
+            <span>Full name</span>
+            <input
+              name="name"
+              type="text"
+              placeholder="Your name"
+              value={form.name}
+              onChange={handleChange}
+              required
+            />
+          </label>
+          <label className="auth-field">
+            <span>Email address</span>
+            <input
+              name="email"
+              type="email"
+              placeholder="you@example.com"
+              value={form.email}
+              onChange={handleChange}
+              required
+            />
+          </label>
+          <label className="auth-field">
+            <span>Password</span>
+            <div className="auth-password-wrap">
+              <input
+                name="password"
+                type={showPassword ? 'text' : 'password'}
+                placeholder="Create password"
+                value={form.password}
+                onChange={handleChange}
+                required
+              />
+              <button
+                type="button"
+                className="auth-password-toggle"
+                onClick={() => setShowPassword((current) => !current)}
+              >
+                {showPassword ? 'Hide' : 'Show'}
+              </button>
+            </div>
+          </label>
+          <div className={`password-strength password-strength-${passwordScore}`}>
+            <span><i /></span>
+            <strong>{strengthLabel}</strong>
+          </div>
           <button type="submit" className="btn-primary w-full" disabled={loading}>
             {loading ? <Loader label="Creating account..." size="sm" /> : 'Sign up'}
           </button>
@@ -109,7 +157,13 @@ export default function Signup() {
             Sign in
           </Link>
         </p>
-      </AuthCard>
-    </div>
+        <p className="mt-3 text-sm text-slate-400">
+          Managing TourVision?{' '}
+          <Link to="/admin/login" className="font-semibold text-teal-300 hover:text-teal-200">
+            Admin login
+          </Link>
+        </p>
+      </div>
+    </AuthShell>
   );
 }

@@ -4,7 +4,8 @@ import toast from 'react-hot-toast';
 import PropTypes from 'prop-types';
 import { useAuth } from '../../context/AuthContext';
 import QRScanner from '../qr/QRScanner';
-import { parsePlaceIdFromImageResult, parsePlaceIdFromQr } from '../../utils/qr';
+import { parsePlaceIdFromImageResult } from '../../utils/qr';
+import { openQrHeritagePage } from '../../utils/qrNavigation';
 
 function TabIcon({ kind, active }) {
   const className = `h-5 w-5 transition duration-200 ${active ? 'text-teal-600' : 'text-slate-500'}`;
@@ -77,16 +78,11 @@ export default function BottomNav() {
   }
 
   const handleQrDetected = async (decodedText) => {
-    const placeId = parsePlaceIdFromQr(decodedText);
+    const opened = await openQrHeritagePage(decodedText, navigate);
 
-    if (!placeId) {
-      toast.error('Invalid QR');
-      return;
+    if (opened) {
+      setScannerOpen(false);
     }
-
-    setScannerOpen(false);
-    toast.success('Opening your landmark experience.');
-    navigate(`/place/${placeId}`);
   };
 
   const handleImageDetected = async (result) => {

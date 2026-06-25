@@ -4,9 +4,13 @@ export function parsePlaceIdFromQr(decodedText) {
 
   try {
     const parsed = JSON.parse(rawText);
-    placeId = parsed.place_id || parsed.placeId || null;
+    placeId = parsed.qr_id || parsed.qrId || parsed.place_id || parsed.placeId || null;
   } catch {
     // Non-JSON QR formats are handled below.
+  }
+
+  if (!placeId && rawText.includes('/qr-heritage/')) {
+    placeId = rawText.split('/qr-heritage/')[1];
   }
 
   if (!placeId && rawText.includes('/place/')) {

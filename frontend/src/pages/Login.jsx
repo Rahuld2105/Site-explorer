@@ -10,21 +10,38 @@ import { useAuth } from '../context/AuthContext';
 /**
  * Shared authentication card container used by login and signup pages.
  */
-function AuthCard({ children, title, subtitle }) {
+function AuthShell({ children }) {
   return (
-    <div className="panel-strong w-full max-w-md p-8">
-      <span className="badge">TourVision Access</span>
-      <h1 className="mt-4 font-heading text-3xl text-white">{title}</h1>
-      <p className="mt-2 text-sm text-slate-400">{subtitle}</p>
-      <div className="mt-6">{children}</div>
+    <div className="auth-page">
+      <div className="auth-hero" aria-hidden="true">
+        <div className="auth-hero-sun" />
+        <div className="auth-hero-fort">
+          <span className="auth-hero-dome" />
+          <span className="auth-hero-tower auth-hero-tower-left" />
+          <span className="auth-hero-gate" />
+          <span className="auth-hero-tower auth-hero-tower-right" />
+        </div>
+        <div className="auth-hero-path" />
+      </div>
+      <div className="auth-grid">
+        <section className="auth-copy anim-fade-up">
+          <span className="auth-kicker">TourVision Access</span>
+          <h1>Explore heritage with smarter context.</h1>
+          <p>Sign in to restore your saved trips, AI guide sessions, route plans, and place-aware alerts.</p>
+          <div className="auth-highlights">
+            <span>Live alerts</span>
+            <span>AI narration</span>
+            <span>Trip memory</span>
+          </div>
+        </section>
+        {children}
+      </div>
     </div>
   );
 }
 
-AuthCard.propTypes = {
-  children: PropTypes.node.isRequired,
-  subtitle: PropTypes.string.isRequired,
-  title: PropTypes.string.isRequired
+AuthShell.propTypes = {
+  children: PropTypes.node.isRequired
 };
 
 /**
@@ -38,6 +55,7 @@ export default function Login() {
     password: ''
   });
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   if (isAuthenticated) {
     return <Navigate replace to="/" />;
@@ -64,30 +82,43 @@ export default function Login() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top,_rgba(96,165,250,0.22),_transparent_35%),linear-gradient(180deg,_#08111f_0%,_#0b1930_48%,_#10192c_100%)] px-4 py-12">
-      <AuthCard
-        title="Sign in to your travel cockpit"
-        subtitle="Access saved trips, immersive guides, expenses, and real-time AI narration."
-      >
+    <AuthShell>
+      <div className="auth-card anim-scale-in">
+        <span className="badge badge-teal">Welcome back</span>
+        <h2>Sign in to TourVision</h2>
+        <p>Continue from your last heritage journey.</p>
         <form className="space-y-4" onSubmit={handleSubmit}>
-          <input
-            className="field"
-            name="email"
-            type="email"
-            placeholder="Email address"
-            value={form.email}
-            onChange={handleChange}
-            required
-          />
-          <input
-            className="field"
-            name="password"
-            type="password"
-            placeholder="Password"
-            value={form.password}
-            onChange={handleChange}
-            required
-          />
+          <label className="auth-field">
+            <span>Email address</span>
+            <input
+              name="email"
+              type="email"
+              placeholder="you@example.com"
+              value={form.email}
+              onChange={handleChange}
+              required
+            />
+          </label>
+          <label className="auth-field">
+            <span>Password</span>
+            <div className="auth-password-wrap">
+              <input
+                name="password"
+                type={showPassword ? 'text' : 'password'}
+                placeholder="Enter your password"
+                value={form.password}
+                onChange={handleChange}
+                required
+              />
+              <button
+                type="button"
+                className="auth-password-toggle"
+                onClick={() => setShowPassword((current) => !current)}
+              >
+                {showPassword ? 'Hide' : 'Show'}
+              </button>
+            </div>
+          </label>
           <button type="submit" className="btn-primary w-full" disabled={loading}>
             {loading ? <Loader label="Signing in..." size="sm" /> : 'Login'}
           </button>
@@ -105,7 +136,7 @@ export default function Login() {
             Admin login
           </Link>
         </p>
-      </AuthCard>
-    </div>
+      </div>
+    </AuthShell>
   );
 }

@@ -2,13 +2,14 @@ const express = require("express");
 require("dotenv").config();
 
 const asyncHandler = require("../utils/asyncHandler");
-const { getGeminiApiKey, getGeminiModel, toGeminiPublicError } = require("../services/aiContent.service");
+const {
+  getGeminiApiKey,
+  getGeminiModel,
+  logGeminiError,
+  toGeminiPublicError
+} = require("../services/aiContent.service");
 
 const router = express.Router();
-const MODEL_NAME = process.env.GEMINI_MODEL || "models/gemini-flash-latest";
-
-console.log("KEY:", process.env.GEMINI_API_KEY ? "FOUND" : "MISSING");
-console.log("MODEL:", MODEL_NAME);
 
 async function listGeminiModels() {
   const apiKey = getGeminiApiKey();
@@ -17,7 +18,11 @@ async function listGeminiModels() {
   const models = await response.json();
 
   if (!response.ok) {
-    throw new Error(models?.error?.message || "Unable to list Gemini models.");
+    const error = new Error(models?.error?.message || "Unable to list Gemini models.");
+    error.status = response.status;
+    error.statusText = response.statusText;
+    error.details = models?.error || models;
+    throw error;
   }
 
   return models;
@@ -32,7 +37,7 @@ router.get("/list-models", async (req, res) => {
     const publicError = err.publicMessage
       ? { statusCode: err.statusCode || 503, message: err.publicMessage }
       : toGeminiPublicError(err);
-    console.error("Gemini model list failed:", publicError.message);
+    logGeminiError("Gemini model list failed:", err);
     return res.status(publicError.statusCode).json({ error: "failed", message: publicError.message });
   }
 });
@@ -49,7 +54,7 @@ router.get("/test-gemini", async (req, res) => {
     const publicError = err.publicMessage
       ? { statusCode: err.statusCode || 503, message: err.publicMessage }
       : toGeminiPublicError(err);
-    console.error("Gemini test failed:", publicError.message);
+    logGeminiError("Gemini test failed:", err);
     return res.status(publicError.statusCode).json({ error: "failed", message: publicError.message });
   }
 });
@@ -63,8 +68,6 @@ router.post(
       return res.status(400).json({ message: "place_name and message are required." });
     }
 
-    const model = getGeminiModel();
-
     const prompt = `You are a smart travel guide.
 
 Place: ${placeName}
@@ -75,13 +78,14 @@ Give helpful, short, engaging response.`;
     let text = "";
 
     try {
+      const model = getGeminiModel();
       const result = await model.generateContent(prompt);
       text = result.response.text().trim();
     } catch (err) {
       const publicError = err.publicMessage
         ? { statusCode: err.statusCode || 503, message: err.publicMessage }
         : toGeminiPublicError(err);
-      console.error("Gemini guide failed:", publicError.message);
+      logGeminiError("Gemini guide failed:", err);
       return res.status(publicError.statusCode).json({ message: publicError.message });
     }
 

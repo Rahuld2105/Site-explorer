@@ -4,6 +4,10 @@ export const PLACE_CONTENT = {
     place_id: 'rajgad',
     name: 'Rajgad Fort',
     location_name: 'Pune, Maharashtra',
+    latitude: 18.2469,
+    longitude: 73.6822,
+    lat: 18.2469,
+    lng: 73.6822,
     category: 'Historic Fort',
     description:
       'Rajgad was the capital of Chhatrapati Shivaji Maharaj for many years. It is one of the most important forts in Maratha history and offers breathtaking views of the Sahyadri mountains.',
@@ -50,6 +54,10 @@ export const PLACE_CONTENT = {
     place_id: 'sinhagad',
     name: 'Sinhagad Fort',
     location_name: 'Pune, Maharashtra',
+    latitude: 18.3663,
+    longitude: 73.7559,
+    lat: 18.3663,
+    lng: 73.7559,
     category: 'Hill Fort',
     description:
       'Sinhagad is a hill fort known for the Battle of Sinhagad, sweeping valley views, and a popular Pune trekking route.',

@@ -9,6 +9,7 @@ const morgan = require("morgan");
 const connectDB = require("./src/config/db");
 const { initSocket } = require("./src/config/socket");
 const { notFound, errorHandler } = require("./src/middleware/error.middleware");
+const { logGeminiStartupStatus } = require("./src/services/aiContent.service");
 const { startRecurringJobs } = require("./src/services/jobQueue.service");
 
 const authRoutes = require("./src/routes/auth.routes");
@@ -19,6 +20,8 @@ const adminRoutes = require("./src/routes/admin.routes");
 const feedbackRoutes = require("./src/routes/feedback.routes");
 const aiGuideRoutes = require("./src/routes/aiGuide.routes");
 const alertRoutes = require("./src/routes/alert.routes");
+const heritageRoutes = require("./src/routes/heritage.routes");
+const nearbyServiceRoutes = require("./src/routes/nearbyService.routes");
 
 const app = express();
 const server = http.createServer(app);
@@ -72,6 +75,8 @@ app.use("/api/trip", tripRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/feedback", feedbackRoutes);
 app.use("/api/alerts", alertRoutes);
+app.use("/api/heritage-places", heritageRoutes);
+app.use("/api/nearby-services", nearbyServiceRoutes);
 app.use("/api", aiGuideRoutes);
 
 app.use(notFound);
@@ -80,6 +85,7 @@ app.use(errorHandler);
 const port = Number(process.env.PORT || 5000);
 
 async function bootstrap() {
+  logGeminiStartupStatus();
   await connectDB();
   startRecurringJobs();
 

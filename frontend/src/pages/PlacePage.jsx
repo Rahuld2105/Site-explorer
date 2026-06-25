@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import PropTypes from 'prop-types';
 import { useParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -19,102 +19,392 @@ import {
 import { useLocationContext } from '../context/LocationContext';
 import { clonePlaceContent, findPlaceContent } from '../content/placeContent';
 import { useGeofence } from '../hooks/useGeofence';
+import { getGeofenceStatusForPlace } from '../utils/geoUtils';
 import { resolvePlaceImage } from '../utils/placeImages';
 
-const TABS = ['Overview', 'AR Tour', 'AI Guide', 'Nearby'];
-const WEATHER_ALERTS = [
-  { label: 'Rain warning', match: (place) => /fort|trek|hill|mountain/i.test(`${place?.category} ${place?.best_for}`), tone: 'amber' },
-  { label: 'Heat warning', match: (place) => !/monsoon|waterfall/i.test(`${place?.best_for} ${place?.description}`), tone: 'rose' },
-  { label: 'Visibility warning', match: (place) => /fort|view|hill|mountain/i.test(`${place?.category} ${place?.best_for}`), tone: 'sky' }
+const TABS = ['Overview', 'AI Guide', 'AR Tour', 'Nearby Services'];
+const WEATHER_CODE_LABELS = {
+  0: 'Clear sky',
+  1: 'Mainly clear',
+  2: 'Partly cloudy',
+  3: 'Overcast',
+  45: 'Fog',
+  48: 'Depositing fog',
+  51: 'Light drizzle',
+  53: 'Moderate drizzle',
+  55: 'Dense drizzle',
+  61: 'Light rain',
+  63: 'Moderate rain',
+  65: 'Heavy rain',
+  71: 'Light snow',
+  80: 'Rain showers',
+  81: 'Moderate showers',
+  82: 'Violent showers',
+  95: 'Thunderstorm',
+  96: 'Thunderstorm with hail',
+  99: 'Severe thunderstorm'
+};
+
+const PLACE_ALERT_PROFILES = [
+  {
+    match: /rajgad/i,
+    icon: 'TR',
+    difficulty: 'Moderate to Hard',
+    familyFriendly: 'Best for fit adults and older children',
+    parking: 'Base village parking is limited',
+    bestTime: 'October to February, start before sunrise',
+    duration: '5-7 hours',
+    carry: ['2-3 liters water', 'Trekking shoes', 'Energy snacks', 'Power bank'],
+    alerts: [
+      { title: 'Trek difficulty: Moderate to Hard', tone: 'amber', type: 'trek' },
+      { title: 'Carry sufficient water', tone: 'amber', type: 'trek' },
+      { title: 'Wear trekking shoes', tone: 'teal', type: 'trek' },
+      { title: 'Slippery paths during monsoon', tone: 'rose', type: 'safety' },
+      { title: 'Network coverage may be limited', tone: 'slate', type: 'safety' },
+      { title: 'Landslide-prone sections possible in heavy rain', tone: 'rose', type: 'safety' }
+    ]
+  },
+  {
+    match: /sinhagad/i,
+    icon: 'TR',
+    difficulty: 'Moderate',
+    familyFriendly: 'Family friendly with care on steps',
+    parking: 'Parking can fill early on weekends',
+    bestTime: 'Weekday mornings or late afternoon',
+    duration: '2-4 hours',
+    carry: ['Water', 'Walking shoes', 'Light rain layer'],
+    alerts: [
+      { title: 'Heavy crowd during weekends', tone: 'amber', type: 'safety' },
+      { title: 'Carry water', tone: 'teal', type: 'trek' },
+      { title: 'Slippery steps during rain', tone: 'rose', type: 'safety' },
+      { title: 'Dense fog can reduce visibility in monsoon', tone: 'sky', type: 'safety' }
+    ]
+  },
+  {
+    match: /raigad/i,
+    icon: 'TR',
+    difficulty: 'Moderate',
+    familyFriendly: 'Family friendly if using ropeway',
+    parking: 'Parking available near ropeway/base area',
+    bestTime: 'November to February, check ropeway first',
+    duration: '4-6 hours',
+    carry: ['Water', 'Sun protection', 'Comfortable shoes'],
+    alerts: [
+      { title: 'Check ropeway availability before arrival', tone: 'sky', type: 'route' },
+      { title: 'Long walking sections on the fort', tone: 'amber', type: 'trek' },
+      { title: 'Rain can slow ropeway and walking routes', tone: 'rose', type: 'weather' },
+      { title: 'Watch for slippery trail edges', tone: 'rose', type: 'safety' }
+    ]
+  },
+  {
+    match: /shaniwar|wada/i,
+    icon: 'HM',
+    difficulty: 'Easy',
+    familyFriendly: 'Family friendly',
+    parking: 'Use nearby paid parking or public transport',
+    bestTime: 'Morning opening hours or weekday afternoons',
+    duration: '1-2 hours',
+    carry: ['Water', 'ID if requested', 'Comfortable walking shoes'],
+    alerts: [
+      { title: 'Follow historical monument guidelines', tone: 'teal', type: 'heritage' },
+      { title: 'Check entry timing before visiting', tone: 'sky', type: 'heritage' },
+      { title: 'Photography rules may vary by area', tone: 'amber', type: 'heritage' },
+      { title: 'Crowds increase on weekends and holidays', tone: 'amber', type: 'safety' }
+    ]
+  }
 ];
 
-function buildSmartAlerts(place) {
-  const distanceKm = Number(place?.distance || place?.route?.totalDistanceKm || 0);
-  const terrain = String(place?.terrain || place?.category || place?.best_for || '').toLowerCase();
-  const isRoughTerrain = /fort|trek|hill|mountain|ghat|trail/.test(terrain);
-  const longTravel = distanceKm > 80 || /remote|fort|hill/.test(terrain);
-  const weatherAlerts = WEATHER_ALERTS.filter((alert) => alert.match(place));
-  const recommended = [
-    isRoughTerrain ? 'Bike' : 'Sedan',
-    isRoughTerrain || longTravel ? 'SUV' : 'Bike'
-  ];
-  const caution = isRoughTerrain ? ['Sedan'] : longTravel ? ['Bike'] : [];
+function normalizePlaceKey(place) {
+  return `${place?.name || ''} ${place?.slug || ''} ${place?.place_id || ''}`.toLowerCase();
+}
+
+function getPlaceAlertProfile(place) {
+  const key = normalizePlaceKey(place);
+  const matched = PLACE_ALERT_PROFILES.find((profile) => profile.match.test(key));
+  const isHillFort = /fort|hill|trek|trail|ghat/i.test(`${place?.category} ${place?.best_for} ${place?.description}`);
+
+  if (matched) {
+    return matched;
+  }
 
   return {
-    route: [
-      ...(longTravel ? ['Long travel duration'] : []),
-      ...(/pune|mumbai|city|urban/i.test(`${place?.location_name} ${place?.city} ${place?.terrain}`) ? ['Traffic warning'] : [])
-    ],
-    vehicles: {
-      caution,
-      recommended: [...new Set(recommended)]
-    },
-    weather: weatherAlerts
+    icon: isHillFort ? 'TR' : 'HM',
+    difficulty: isHillFort ? 'Moderate' : 'Easy',
+    familyFriendly: isHillFort ? 'Good for active families' : 'Family friendly',
+    parking: place?.parking || 'Check local parking before arrival',
+    bestTime: place?.best_time_to_visit || (isHillFort ? 'Early morning' : 'Morning or late afternoon'),
+    duration: place?.estimated_visit_duration || (isHillFort ? '3-5 hours' : '1-2 hours'),
+    carry: isHillFort ? ['Water', 'Walking shoes', 'Sun protection'] : ['Water', 'Comfortable shoes'],
+    alerts: isHillFort
+      ? [
+          { title: 'Wear shoes with good grip', tone: 'teal', type: 'trek' },
+          { title: 'Start early to avoid heat', tone: 'amber', type: 'safety' }
+        ]
+      : [
+          { title: 'Respect monument rules', tone: 'teal', type: 'heritage' },
+          { title: 'Check opening hours before visiting', tone: 'sky', type: 'heritage' }
+        ]
   };
 }
 
-function SmartAlertsPanel({ place }) {
-  const alerts = buildSmartAlerts(place);
+function getWeatherRecommendation(weather, profile) {
+  if (!weather) {
+    return 'Weather is unavailable right now. Use local conditions before starting.';
+  }
+
+  if (weather.rainProbability >= 70 || weather.code >= 80 || [63, 65, 95, 96, 99].includes(weather.code)) {
+    return /Hard|Moderate/i.test(profile.difficulty)
+      ? 'Delay the trek or carry rain protection and avoid exposed sections.'
+      : 'Carry rain protection and allow extra travel time.';
+  }
+
+  if (weather.temperature >= 35) {
+    return 'Visit early, hydrate often, and avoid long exposed walks after noon.';
+  }
+
+  if (weather.windSpeed >= 35) {
+    return 'Avoid exposed edges and viewpoints during strong wind.';
+  }
+
+  return 'Conditions look manageable. Keep water and basic safety gear ready.';
+}
+
+function deriveWeatherAlerts(weather) {
+  if (!weather) {
+    return [];
+  }
+
+  return [
+    weather.rainProbability >= 70 || [63, 65, 80, 81, 82].includes(weather.code)
+      ? { title: 'Heavy rain expected', tone: 'rose', type: 'weather' }
+      : null,
+    [95, 96, 99].includes(weather.code)
+      ? { title: 'Thunderstorm warning', tone: 'rose', type: 'weather' }
+      : null,
+    weather.temperature >= 35
+      ? { title: 'High temperature warning', tone: 'amber', type: 'weather' }
+      : null,
+    weather.windSpeed >= 35
+      ? { title: 'Strong wind warning', tone: 'amber', type: 'weather' }
+      : null,
+    [45, 48].includes(weather.code)
+      ? { title: 'Dense fog may affect visibility', tone: 'sky', type: 'weather' }
+      : null
+  ].filter(Boolean);
+}
+
+function usePlaceWeather(place) {
+  const [weatherState, setWeatherState] = useState({ data: null, loading: false, error: '' });
+  const location = useMemo(() => getPlaceLocation(place), [place]);
+
+  useEffect(() => {
+    if (!location) {
+      setWeatherState({ data: null, loading: false, error: 'Place coordinates unavailable' });
+      return undefined;
+    }
+
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), 8000);
+
+    const loadWeather = async () => {
+      setWeatherState((current) => ({ ...current, loading: true, error: '' }));
+
+      try {
+        const params = new URLSearchParams({
+          latitude: String(location.lat),
+          longitude: String(location.lng),
+          current: 'temperature_2m,weather_code,wind_speed_10m',
+          hourly: 'precipitation_probability',
+          forecast_days: '1',
+          timezone: 'auto'
+        });
+        const response = await fetch(`https://api.open-meteo.com/v1/forecast?${params.toString()}`, {
+          signal: controller.signal
+        });
+
+        if (!response.ok) {
+          throw new Error('Weather request failed');
+        }
+
+        const payload = await response.json();
+        const probabilities = Array.isArray(payload?.hourly?.precipitation_probability)
+          ? payload.hourly.precipitation_probability.slice(0, 12).filter((value) => Number.isFinite(Number(value)))
+          : [];
+        const rainProbability = probabilities.length ? Math.max(...probabilities.map(Number)) : 0;
+        const code = Number(payload?.current?.weather_code ?? 0);
+
+        setWeatherState({
+          data: {
+            code,
+            condition: WEATHER_CODE_LABELS[code] || 'Live weather',
+            rainProbability,
+            temperature: Number(payload?.current?.temperature_2m),
+            windSpeed: Number(payload?.current?.wind_speed_10m)
+          },
+          loading: false,
+          error: ''
+        });
+      } catch (error) {
+        if (error.name !== 'AbortError') {
+          setWeatherState({ data: null, loading: false, error: 'Weather unavailable' });
+        }
+      } finally {
+        window.clearTimeout(timeoutId);
+      }
+    };
+
+    loadWeather();
+    return () => {
+      controller.abort();
+      window.clearTimeout(timeoutId);
+    };
+  }, [location?.lat, location?.lng]);
+
+  return weatherState;
+}
+
+function buildSmartAlerts(place, weather) {
+  const profile = getPlaceAlertProfile(place);
+  const weatherAlerts = deriveWeatherAlerts(weather);
+
+  return {
+    activeAlerts: [...weatherAlerts, ...profile.alerts].slice(0, 8),
+    profile,
+    recommendation: getWeatherRecommendation(weather, profile)
+  };
+}
+
+function AlertIcon({ type }) {
+  const label = {
+    weather: 'WX',
+    safety: '!',
+    trek: 'TR',
+    heritage: 'HM',
+    route: 'RT',
+    success: 'OK'
+  }[type] || 'AI';
+
+  return <span className={`smart-alert-icon smart-alert-icon-${type}`}>{label}</span>;
+}
+
+AlertIcon.propTypes = {
+  type: PropTypes.string.isRequired
+};
+
+function SmartAlertsPanel({ geofenceState, place }) {
+  const { data: weather, loading: weatherLoading, error: weatherError } = usePlaceWeather(place);
+  const alerts = useMemo(() => buildSmartAlerts(place, weather), [place, weather]);
+  const isInside = geofenceState?.status === 'inside';
+  const isNear = geofenceState?.status === 'near';
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-[var(--shadow-card)]">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+    <div className="smart-alert-card anim-fade-up">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="text-sm font-semibold text-slate-900">Smart Tour Alerts</p>
-          <p className="mt-1 text-sm text-[var(--c-text-secondary)]">Weather, route, and vehicle suggestions for this visit.</p>
+          <p className="flex items-center gap-2 text-sm font-black uppercase tracking-[0.12em] text-teal-700">
+            <AlertIcon type={isInside ? 'success' : 'safety'} />
+            Place-Aware Smart Alerts
+          </p>
+          <h3 className="mt-2 text-2xl font-black text-slate-950">{place?.name || 'Selected heritage place'}</h3>
+          <p className="mt-1 text-sm text-slate-600">
+            {isInside
+              ? 'You are inside the geofence. Showing on-site safety and travel guidance.'
+              : isNear
+                ? 'You are near the geofence. Prepare before entering the site.'
+                : 'Showing place-specific preparation alerts before arrival.'}
+          </p>
         </div>
-        <span className="badge badge-teal">Live-ready</span>
+        <span className={`badge ${isInside ? 'badge-green' : isNear ? 'badge-amber' : 'badge-teal'}`}>
+          {isInside ? 'Geofence active' : isNear ? 'Near site' : 'Place ready'}
+        </span>
       </div>
 
-      <div className="mt-5 grid gap-3 md:grid-cols-3">
-        <div className="rounded-xl bg-slate-50 p-4">
-          <p className="text-xs font-black uppercase tracking-[0.12em] text-slate-400">Weather</p>
-          <div className="mt-3 space-y-2">
-            {alerts.weather.map((alert) => (
-              <p key={alert.label} className="text-sm font-bold text-slate-700">{alert.label}</p>
-            ))}
+      <div className="mt-6 grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
+        <div className="smart-alert-weather">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.12em] text-slate-500">Live Weather</p>
+              <p className="mt-2 text-xl font-black text-slate-950">
+                {weatherLoading ? 'Checking...' : weather?.condition || weatherError || 'Weather unavailable'}
+              </p>
+            </div>
+            <AlertIcon type="weather" />
           </div>
-        </div>
-        <div className="rounded-xl bg-slate-50 p-4">
-          <p className="text-xs font-black uppercase tracking-[0.12em] text-slate-400">Route</p>
-          <div className="mt-3 space-y-2">
-            {(alerts.route.length ? alerts.route : ['Route looks comfortable']).map((alert) => (
-              <p key={alert} className="text-sm font-bold text-slate-700">{alert}</p>
-            ))}
+          <div className="mt-5 grid grid-cols-3 gap-2">
+            <div className="smart-alert-metric">
+              <span>Temp</span>
+              <strong>{Number.isFinite(weather?.temperature) ? `${Math.round(weather.temperature)} C` : '--'}</strong>
+            </div>
+            <div className="smart-alert-metric">
+              <span>Rain</span>
+              <strong>{Number.isFinite(weather?.rainProbability) ? `${Math.round(weather.rainProbability)}%` : '--'}</strong>
+            </div>
+            <div className="smart-alert-metric">
+              <span>Wind</span>
+              <strong>{Number.isFinite(weather?.windSpeed) ? `${Math.round(weather.windSpeed)} km/h` : '--'}</strong>
+            </div>
           </div>
+          <p className="mt-4 rounded-xl bg-white/70 p-3 text-sm font-bold leading-6 text-slate-700">
+            {alerts.recommendation}
+          </p>
         </div>
-        <div className="rounded-xl bg-slate-50 p-4">
-          <p className="text-xs font-black uppercase tracking-[0.12em] text-slate-400">Vehicles</p>
-          <div className="mt-3 space-y-2">
-            {alerts.vehicles.recommended.map((vehicle) => (
-              <p key={vehicle} className="text-sm font-bold text-emerald-700">Recommended: {vehicle}</p>
-            ))}
-            {alerts.vehicles.caution.map((vehicle) => (
-              <p key={vehicle} className="text-sm font-bold text-amber-700">Caution: {vehicle}</p>
-            ))}
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          {alerts.activeAlerts.map((alert) => (
+            <div key={`${alert.type}-${alert.title}`} className={`smart-alert-item smart-alert-item-${alert.tone}`}>
+              <AlertIcon type={alert.type} />
+              <p>{alert.title}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-5 grid gap-3 md:grid-cols-4">
+        {[
+          ['Best time', alerts.profile.bestTime || place?.best_time_to_visit || 'Early morning'],
+          ['Duration', alerts.profile.duration || place?.estimated_visit_duration || (alerts.profile.difficulty === 'Easy' ? '1-2 hours' : '4-6 hours')],
+          ['Difficulty', alerts.profile.difficulty],
+          ['Family', alerts.profile.familyFriendly],
+          ['Parking', alerts.profile.parking],
+          ['Carry', alerts.profile.carry.join(', ')]
+        ].map(([label, value]) => (
+          <div key={label} className="smart-alert-detail">
+            <span>{label}</span>
+            <strong>{value}</strong>
           </div>
-        </div>
+        ))}
       </div>
     </div>
   );
 }
 
 SmartAlertsPanel.propTypes = {
+  geofenceState: PropTypes.shape({
+    status: PropTypes.string
+  }),
   place: PropTypes.shape({
     best_for: PropTypes.string,
+    best_time_to_visit: PropTypes.string,
     category: PropTypes.string,
-    city: PropTypes.string,
     description: PropTypes.string,
-    distance: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+    estimated_visit_duration: PropTypes.string,
+    latitude: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+    location: PropTypes.oneOfType([
+      PropTypes.string,
+      PropTypes.shape({
+        coordinates: PropTypes.array
+      })
+    ]),
     location_name: PropTypes.string,
-    route: PropTypes.shape({
-      totalDistanceKm: PropTypes.oneOfType([PropTypes.number, PropTypes.string])
-    }),
-    terrain: PropTypes.string
+    longitude: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+    name: PropTypes.string,
+    place_id: PropTypes.string,
+    slug: PropTypes.string
   })
 };
 
 SmartAlertsPanel.defaultProps = {
+  geofenceState: null,
   place: null
 };
 
@@ -129,6 +419,18 @@ const isRajgadPlace = (place) => {
 };
 
 const getRajgadPlace = () => clonePlaceContent(findPlaceContent('rajgad'));
+
+function getPlaceLocation(place) {
+  const coordinates = place?.location?.coordinates || place?.coordinates;
+  const lat = Number(place?.latitude ?? place?.lat ?? coordinates?.lat ?? coordinates?.[1]);
+  const lng = Number(place?.longitude ?? place?.lng ?? coordinates?.lng ?? coordinates?.[0]);
+
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+    return null;
+  }
+
+  return { lat, lng };
+}
 
 const createGuideSections = (place) => {
   const managedSections = Array.isArray(place?.ai_sections)
@@ -217,7 +519,7 @@ export default function PlacePage() {
   const [loading, setLoading] = useState(true);
   const [guideLoading, setGuideLoading] = useState(false);
   const [error, setError] = useState('');
-  const [insideFromServer, setInsideFromServer] = useState(null);
+  const [serverGeofenceState, setServerGeofenceState] = useState(null);
   const [captions, setCaptions] = useState('');
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [activeGuideSectionId, setActiveGuideSectionId] = useState('overview');
@@ -228,10 +530,30 @@ export default function PlacePage() {
   const [visitDate, setVisitDate] = useState('');
   const [travelers, setTravelers] = useState('2 travelers');
   const [saved, setSaved] = useState(false);
+  const lastGeofenceSyncRef = useRef('');
 
   // Derived state
   const isInsideLocal = useGeofence(place?.geofence_polygon, location);
-  const isInsideGeofence = useMemo(() => insideFromServer ?? isInsideLocal, [insideFromServer, isInsideLocal]);
+  const localGeofenceState = useMemo(
+    () => getGeofenceStatusForPlace(place, location),
+    [location?.lat, location?.lng, place]
+  );
+  const geofenceState = useMemo(() => {
+    if (!serverGeofenceState) {
+      return {
+        ...localGeofenceState,
+        inside: localGeofenceState.inside || isInsideLocal,
+        status: localGeofenceState.inside || isInsideLocal ? 'inside' : localGeofenceState.status
+      };
+    }
+
+    return {
+      ...localGeofenceState,
+      ...serverGeofenceState,
+      inside: Boolean(serverGeofenceState.inside ?? serverGeofenceState.isInside)
+    };
+  }, [isInsideLocal, localGeofenceState, serverGeofenceState]);
+  const isInsideGeofence = Boolean(geofenceState.inside);
   const gallery = useMemo(() => {
     const managedContent = findPlaceContent(place?.place_id || place?.id || place?.slug || place?.name);
     if (managedContent?.image) {
@@ -247,7 +569,6 @@ export default function PlacePage() {
 
     return images;
   }, [aiContent?.images, place]);
-  const nearbyPlaces = useMemo(() => place?.nearby_places || [], [place?.nearby_places]);
   const score = Number(place?.score || place?.rating || 9.4).toFixed(1);
   const price = Number(place?.price || place?.entry_fee || 0);
   const guideData = useMemo(() => createGuideSections(place), [place]);
@@ -412,16 +733,53 @@ export default function PlacePage() {
         return;
       }
 
+      const syncKey = [
+        id,
+        Math.round(Number(location.lat) * 10000),
+        Math.round(Number(location.lng) * 10000),
+        geofenceState.status
+      ].join(':');
+
+      if (lastGeofenceSyncRef.current === syncKey) {
+        return;
+      }
+
+      lastGeofenceSyncRef.current = syncKey;
+
       try {
+        const sessionIdKey = 'tourvision_geofence_session';
+        let sessionId = localStorage.getItem(sessionIdKey);
+
+        if (!sessionId) {
+          sessionId = `geo-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+          localStorage.setItem(sessionIdKey, sessionId);
+        }
+
         const response = await checkGeofence(id, {
           lat: location.lat,
           lng: location.lng,
-          accuracy: location.accuracy
+          accuracy: location.accuracy,
+          previousStatus: serverGeofenceState?.status || null,
+          sessionId
         });
         const data = extractData(response);
 
         if (isMounted) {
-          setInsideFromServer(Boolean(data?.isInside ?? data?.inside));
+          const serverPlaceLat = Number(data?.place?.lat);
+          const serverPlaceLng = Number(data?.place?.lng);
+
+          setServerGeofenceState({
+            distanceMeters: Number(data?.distanceMeters),
+            event: data?.event || null,
+            inside: Boolean(data?.isInside ?? data?.inside),
+            nearRadiusMeters: Number(data?.nearRadiusMeters || localGeofenceState.nearRadiusMeters),
+            placeCoordinates: Number.isFinite(serverPlaceLat) && Number.isFinite(serverPlaceLng)
+              ? { lat: serverPlaceLat, lng: serverPlaceLng }
+              : localGeofenceState.placeCoordinates,
+            radiusMeters: Number(data?.radiusMeters || localGeofenceState.radiusMeters),
+            status: data?.status || (data?.inside ? 'inside' : 'outside'),
+            stored: Boolean(data?.stored)
+          });
         }
       } catch (geofenceError) {
         if (isMounted) {
@@ -434,7 +792,7 @@ export default function PlacePage() {
     return () => {
       isMounted = false;
     };
-  }, [id, location, place]);
+  }, [geofenceState.status, id, localGeofenceState, location, place, serverGeofenceState?.status]);
 
   // Listen for narration events
   useEffect(() => {
@@ -640,16 +998,12 @@ export default function PlacePage() {
               )}
             </div>
 
-            <SmartAlertsPanel place={place} />
+            <SmartAlertsPanel geofenceState={geofenceState} place={place} />
 
             <PlaceTabs activeTab={activeTab} setActiveTab={setActiveTab} tabs={TABS} />
 
             {/* Tab Content */}
             {activeTab === 'Overview' && <PlaceOverviewTab aiContent={aiContent} place={place} />}
-
-            {activeTab === 'AR Tour' && (
-              <PlaceARTourTab aiContent={aiContent} captions={captions} gallery={gallery} place={place} />
-            )}
 
             {activeTab === 'AI Guide' && (
               <PlaceAIGuideTab
@@ -666,19 +1020,30 @@ export default function PlacePage() {
               />
             )}
 
-            {activeTab === 'Nearby' && <PlaceNearbyTab nearbyPlaces={nearbyPlaces} />}
+            {activeTab === 'AR Tour' && (
+              <PlaceARTourTab aiContent={aiContent} captions={captions} gallery={gallery} place={place} />
+            )}
+
+            {activeTab === 'Nearby Services' && (
+              <PlaceNearbyTab
+                placeLocation={getPlaceLocation(place)}
+              />
+            )}
           </section>
 
           {/* Right Sidebar - Action Card */}
           <PlaceActionCard
+            geofenceState={geofenceState}
             guideLoading={guideLoading}
             isInsideGeofence={isInsideGeofence}
+            location={location}
             onAddToWishlist={() => setSaved((current) => !current)}
             onStartTour={handleStartTour}
             onViewGuide={() => setActiveTab('AI Guide')}
             onTravelersChange={setTravelers}
             onVisitDateChange={setVisitDate}
             price={price}
+            place={place}
             saved={saved}
             score={score}
             travelers={travelers}

@@ -12,6 +12,7 @@ export default function AdminLogin() {
   const { isAuthenticated, login, user } = useAuth();
   const [form, setForm] = useState({ email: '', password: '' });
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   if (isAuthenticated && user?.role === 'admin') {
     return <Navigate replace to="/admin/dashboard" />;
@@ -38,55 +39,68 @@ export default function AdminLogin() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-950 px-4 py-12 text-white">
-      <div className="grid w-full max-w-5xl overflow-hidden rounded-lg border border-white/10 bg-white shadow-2xl lg:grid-cols-[1fr_420px]">
-        <section className="hidden bg-[linear-gradient(135deg,#0f766e,#1d4ed8_55%,#7c3aed)] p-10 text-white lg:flex lg:flex-col lg:justify-between">
+    <div className="auth-page auth-page-admin">
+      <div className="auth-hero" aria-hidden="true">
+        <div className="auth-hero-sun" />
+        <div className="auth-hero-fort">
+          <span className="auth-hero-dome" />
+          <span className="auth-hero-tower auth-hero-tower-left" />
+          <span className="auth-hero-gate" />
+          <span className="auth-hero-tower auth-hero-tower-right" />
+        </div>
+        <div className="auth-hero-path" />
+      </div>
+      <div className="auth-grid">
+        <section className="auth-copy anim-fade-up">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-teal-100">TourVision Admin</p>
-            <h1 className="mt-4 max-w-xl text-5xl font-extrabold leading-tight">
-              Manage tourism operations from one command center.
-            </h1>
+            <span className="auth-kicker">TourVision Admin</span>
+            <h1>Operate every heritage workflow from one dashboard.</h1>
+            <p>Manage places, alerts, AI guide content, QR scans, travelers, trips, media, feedback, and platform settings.</p>
           </div>
-          <div className="grid grid-cols-2 gap-3 text-sm font-bold">
-            {['Places', 'Trips', 'AI Guide', 'Analytics'].map((item) => (
-              <span key={item} className="rounded-lg border border-white/20 bg-white/10 px-4 py-3">
-                {item}
-              </span>
-            ))}
+          <div className="auth-highlights">
+            <span>Places</span>
+            <span>Smart alerts</span>
+            <span>Analytics</span>
+            <span>CMS</span>
           </div>
         </section>
 
-        <section className="bg-white p-6 text-slate-950 sm:p-8">
-          <div className="mb-8">
-            <span className="badge badge-teal">Admin Login</span>
-            <h2 className="mt-4 text-3xl font-extrabold">Sign in</h2>
-            <p className="mt-2 text-sm font-semibold text-slate-500">
-              Admin email and password are required for dashboard access.
-            </p>
-          </div>
+        <section className="auth-card anim-scale-in">
+          <span className="badge badge-teal">Admin Login</span>
+          <h2>Secure dashboard access</h2>
+          <p>Use an admin account to open the TourVision control center.</p>
 
           <form className="space-y-4" onSubmit={handleSubmit}>
-            <label className="input-wrap">
-              <span className="input-label">Admin Email</span>
+            <label className="auth-field">
+              <span>Admin Email</span>
               <input
-                className="field"
                 name="email"
                 type="email"
+                placeholder="admin@example.com"
                 value={form.email}
                 onChange={handleChange}
                 required
               />
             </label>
-            <label className="input-wrap">
-              <span className="input-label">Password</span>
-              <input
-                className="field"
-                name="password"
-                type="password"
-                value={form.password}
-                onChange={handleChange}
-                required
-              />
+            <label className="auth-field">
+              <span>Password</span>
+              <div className="auth-password-wrap">
+                <input
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="Enter admin password"
+                  value={form.password}
+                  onChange={handleChange}
+                  required
+                />
+                <button
+                  type="button"
+                  className="auth-password-toggle"
+                  onClick={() => setShowPassword((current) => !current)}
+                >
+                  {showPassword ? 'Hide' : 'Show'}
+                </button>
+              </div>
             </label>
             <button type="submit" className="btn-primary w-full" disabled={loading}>
               {loading ? <Loader label="Checking admin..." size="sm" /> : 'Open Admin Dashboard'}
@@ -96,6 +110,9 @@ export default function AdminLogin() {
           <div className="mt-6 flex flex-wrap items-center justify-between gap-3 text-sm font-semibold text-slate-500">
             <Link className="text-teal-700 hover:text-teal-900" to="/login">
               User login
+            </Link>
+            <Link className="text-teal-700 hover:text-teal-900" to="/signup">
+              Create account
             </Link>
             <Link className="hover:text-slate-900" to="/">
               Back to TourVision

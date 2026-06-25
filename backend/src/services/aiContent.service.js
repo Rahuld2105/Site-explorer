@@ -1,12 +1,37 @@
 const axios = require("axios");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
-const MODEL_NAME = process.env.GEMINI_MODEL || "models/gemini-flash-latest";
+const DEFAULT_GEMINI_MODEL = "gemini-2.5-flash";
+
+function isDeprecatedGeminiModel(modelName) {
+  const normalized = modelName.replace(/^models\//, "");
+  return normalized.endsWith("-flash-latest") || /^gemini(?:-\d+(?:\.\d+)?)?-pro$/.test(normalized);
+}
+
+function getGeminiModelName() {
+  const configuredModel = (process.env.GEMINI_MODEL || "").trim();
+
+  if (!configuredModel || isDeprecatedGeminiModel(configuredModel)) {
+    return DEFAULT_GEMINI_MODEL;
+  }
+
+  return configuredModel;
+}
+
+function hasGeminiApiKey() {
+  const apiKey = (process.env.GEMINI_API_KEY || "").trim();
+  return Boolean(apiKey && apiKey !== "your_api_key_here" && apiKey !== "your_new_gemini_api_key_here");
+}
+
+function logGeminiStartupStatus() {
+  console.log(`Gemini API Key: ${hasGeminiApiKey() ? "FOUND" : "MISSING"}`);
+  console.log(`Using model: ${getGeminiModelName()}`);
+}
 
 function getGeminiApiKey() {
-  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+  const apiKey = (process.env.GEMINI_API_KEY || "").trim();
 
-  if (!apiKey || apiKey === "your_api_key_here" || apiKey === "your_new_gemini_api_key_here") {
+  if (!hasGeminiApiKey()) {
     const error = new Error("Gemini API key is not configured.");
     error.statusCode = 503;
     error.publicMessage = "Gemini API key is not configured.";
@@ -20,8 +45,22 @@ function getGeminiModel() {
   const genAI = new GoogleGenerativeAI(getGeminiApiKey());
 
   return genAI.getGenerativeModel({
-    model: MODEL_NAME
+    model: getGeminiModelName()
   });
+}
+
+function getGeminiErrorDetails(error) {
+  return {
+    status: error?.status || error?.statusCode || error?.response?.status || null,
+    statusText: error?.statusText || error?.response?.statusText || null,
+    message: error?.message || null,
+    details: error?.errorDetails || error?.response?.data?.error || error?.details || null,
+    stack: error?.stack || null
+  };
+}
+
+function logGeminiError(label, error) {
+  console.error(label, getGeminiErrorDetails(error));
 }
 
 function toGeminiPublicError(error) {
@@ -75,7 +114,7 @@ async function generateChatReply({ place, placeId, zone, message, history = [] }
   console.log("MESSAGE:", message);
 
   const model = getGeminiModel();
-  console.log("Using model:", MODEL_NAME);
+  console.log("Using model:", getGeminiModelName());
   const prompt = `
 You are a travel guide.
 
@@ -104,7 +143,7 @@ Give short helpful answer.
     const error = new Error(publicError.message);
     error.statusCode = publicError.statusCode;
     error.publicMessage = publicError.message;
-    console.error("Gemini chat failed:", publicError.message);
+    logGeminiError("Gemini chat failed:", err);
     throw error;
   }
 }
@@ -126,7 +165,7 @@ async function generatePlaceContent(place) {
   }
 
   const model = getGeminiModel();
-  console.log("Using model:", MODEL_NAME);
+  console.log("Using model:", getGeminiModelName());
   const prompt = `You are a smart travel guide.
 
 Create concise travel content for this place.
@@ -153,7 +192,7 @@ Return only JSON with this shape:
     const error = new Error(publicError.message);
     error.statusCode = publicError.statusCode;
     error.publicMessage = publicError.message;
-    console.error("Gemini place content failed:", publicError.message);
+    logGeminiError("Gemini place content failed:", err);
     throw error;
   }
 
@@ -236,8 +275,12 @@ async function syncChatSessionToVectorDb(session) {
 }
 
 module.exports = {
+  getGeminiModelName,
+  hasGeminiApiKey,
   getGeminiApiKey,
   getGeminiModel,
+  logGeminiStartupStatus,
+  logGeminiError,
   toGeminiPublicError,
   generateChatReply,
   generatePlaceContent,

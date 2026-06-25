@@ -4,7 +4,8 @@ import toast from 'react-hot-toast';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import QRScanner from '../qr/QRScanner';
-import { parsePlaceIdFromImageResult, parsePlaceIdFromQr } from '../../utils/qr';
+import { parsePlaceIdFromImageResult } from '../../utils/qr';
+import { openQrHeritagePage } from '../../utils/qrNavigation';
 import SidebarItem from './SidebarItem';
 
 function CompassIcon() {
@@ -181,17 +182,12 @@ export default function Sidebar({
     [location.pathname]
   );
 
-  const handleQrDetected = (decodedText) => {
-    const placeId = parsePlaceIdFromQr(decodedText);
+  const handleQrDetected = async (decodedText) => {
+    const opened = await openQrHeritagePage(decodedText, navigate);
 
-    if (!placeId) {
-      toast.error('Invalid QR');
-      return;
+    if (opened) {
+      setScannerOpen(false);
     }
-
-    setScannerOpen(false);
-    toast.success('Opening your landmark experience.');
-    navigate(`/place/${placeId}`);
   };
 
   const handleImageDetected = async (result) => {

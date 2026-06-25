@@ -7,7 +7,8 @@ import { extractArray as sharedExtractArray } from "../api/responseUtils";
 import QRScanner from "../components/qr/QRScanner";
 import { useLocationContext } from "../context/LocationContext";
 import { useAuth } from "../context/AuthContext";
-import { parsePlaceIdFromImageResult, parsePlaceIdFromQr } from "../utils/qr";
+import { parsePlaceIdFromImageResult } from "../utils/qr";
+import { openQrHeritagePage } from "../utils/qrNavigation";
 import { resolvePlaceImage } from "../utils/placeImages";
 
 const CATEGORIES = [
@@ -248,16 +249,11 @@ export default function HomeModern() {
   };
 
   const handleQrDetected = async (decodedText) => {
-    const placeId = parsePlaceIdFromQr(decodedText);
+    const opened = await openQrHeritagePage(decodedText, navigate);
 
-    if (!placeId) {
-      toast.error("Invalid QR");
-      return;
+    if (opened) {
+      setScannerOpen(false);
     }
-
-    setScannerOpen(false);
-    toast.success("Opening your landmark experience.");
-    navigate(`/place/${placeId}`);
   };
 
   const handleImageDetected = async (result) => {

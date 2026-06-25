@@ -19,6 +19,7 @@ const Login = lazy(() => import('./pages/Login'));
 const Signup = lazy(() => import('./pages/Signup'));
 const AdminLogin = lazy(() => import('./pages/AdminLogin'));
 const PlacePage = lazy(() => import('./pages/PlacePage'));
+const QRHeritagePage = lazy(() => import('./pages/QRHeritagePage'));
 const NearbyPage = lazy(() => import('./pages/NearbyPage'));
 const TripPlannerPage = lazy(() => import('./pages/TripPlannerPage'));
 const TripsPage = lazy(() => import('./pages/TripsPage'));
@@ -308,6 +309,16 @@ export default function App() {
             <PageErrorBoundary title="Place Experience Error">
               <LazyPage>
                 <PlacePage />
+              </LazyPage>
+            </PageErrorBoundary>
+          }
+        />
+        <Route
+          path="/qr-heritage/:id"
+          element={
+            <PageErrorBoundary title="QR Heritage Information Error">
+              <LazyPage>
+                <QRHeritagePage />
               </LazyPage>
             </PageErrorBoundary>
           }
