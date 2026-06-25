@@ -1,6 +1,8 @@
 const axios = require("axios");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
+const mongoose = require("mongoose");
 
+const HeritageAIContext = require("../models/HeritageAIContext");
 const HeritagePlace = require("../models/HeritagePlace");
 const NearbyService = require("../models/NearbyService");
 const Place = require("../models/Place");
@@ -183,6 +185,309 @@ function getStablePlaceKey(place) {
   return String(place?.place_id || place?.slug || place?.id || place?._id || place?.name || "")
     .trim()
     .toLowerCase();
+}
+
+function getPlaceLookupValue(place = {}) {
+  return String(place?.place_id || place?.id || place?._id || place?.slug || place?.name || "").trim();
+}
+
+function buildHeritagePlaceQuery(place = {}) {
+  const lookupValue = getPlaceLookupValue(place);
+
+  if (!lookupValue) {
+    return null;
+  }
+
+  if (mongoose.Types.ObjectId.isValid(lookupValue)) {
+    return { $or: [{ _id: lookupValue }, { place_id: lookupValue }, { slug: lookupValue }] };
+  }
+
+  return { $or: [{ place_id: lookupValue }, { slug: lookupValue }, { name: lookupValue }] };
+}
+
+async function resolveHeritagePlace(selectedPlace) {
+  const query = buildHeritagePlaceQuery(selectedPlace);
+
+  if (!query) {
+    return null;
+  }
+
+  return HeritagePlace.findOne(query).lean();
+}
+
+function hasTextValue(value) {
+  return Array.isArray(value)
+    ? value.some((item) => String(item?.question || item || "").trim())
+    : Boolean(String(value || "").trim());
+}
+
+function normalizeFaq(faq) {
+  if (typeof faq === "string") {
+    return { question: faq, answer: "" };
+  }
+
+  return {
+    question: faq?.question || faq?.q || "",
+    answer: faq?.answer || faq?.a || ""
+  };
+}
+
+const AI_CONTEXT_FIELD_RULES = [
+  { field: "history", label: "History", pattern: /\b(history|historical|past|built|builder|founded|origin|shivaji|peshwa|maratha|dynasty|king|battle|capital)\b/i },
+  { field: "architecture", label: "Architecture", pattern: /\b(architecture|design|structure|gate|wall|fortification|palace|material|layout|bastion|water|cistern)\b/i },
+  { field: "cultural_significance", label: "Cultural significance", pattern: /\b(culture|cultural|significance|important|importance|heritage|festival|tradition|symbol|legacy)\b/i },
+  { field: "hidden_facts", label: "Hidden facts", pattern: /\b(fact|facts|hidden|secret|unknown|trivia|interesting|surprising)\b/i },
+  { field: "travel_tips", label: "Travel tips", pattern: /\b(tip|tips|visit|carry|wear|safety|crowd|guide|prepare|advice|avoid)\b/i },
+  { field: "photography_tips", label: "Photography tips", pattern: /\b(photo|photos|photography|camera|picture|pictures|selfie|viewpoint|sunrise|sunset|shot|shots)\b/i },
+  { field: "best_time_to_visit", label: "Best time to visit", pattern: /\b(best time|season|month|weather|monsoon|summer|winter|when to visit)\b/i },
+  { field: "trek_difficulty", label: "Trek difficulty", pattern: /\b(trek|hike|climb|difficulty|hard|easy|trail|route|stamina|fitness)\b/i },
+  { field: "family_friendly", label: "Family friendly", pattern: /\b(family|kids|children|child|elderly|parents|senior|safe|friendly)\b/i },
+  { field: "budget_trip", label: "Budget trip", pattern: /\b(budget|cheap|cost|expense|rs|inr|rupee|rupees|money|affordable|low budget)\b/i },
+  { field: "one_day_itinerary", label: "One day itinerary", pattern: /\b(one day|1 day|itinerary|plan|schedule|morning|afternoon|evening|day trip)\b/i }
+];
+
+function getRelevantAIContextFields(message = "") {
+  const fields = new Set(["place_id", "short_summary"]);
+  const matchedRules = AI_CONTEXT_FIELD_RULES.filter((rule) => rule.pattern.test(message));
+
+  if (/\b(history|historical|past|built|builder|founded|origin|shivaji|peshwa|maratha|dynasty|king|battle|capital)\b/i.test(message)) {
+    fields.add("history");
+    fields.add("cultural_significance");
+    fields.add("hidden_facts");
+    return Array.from(fields);
+  }
+
+  if (/\b(architecture|design|structure|gate|wall|fortification|palace|material|layout|bastion|water|cistern)\b/i.test(message)) {
+    fields.add("architecture");
+    fields.add("cultural_significance");
+    return Array.from(fields);
+  }
+
+  if (/\b(fact|facts|hidden|secret|unknown|trivia|interesting|surprising)\b/i.test(message)) {
+    fields.add("hidden_facts");
+    return Array.from(fields);
+  }
+
+  if (matchedRules.length) {
+    matchedRules.forEach((rule) => fields.add(rule.field));
+  } else {
+    fields.add("history");
+    fields.add("architecture");
+    fields.add("cultural_significance");
+    fields.add("hidden_facts");
+  }
+
+  if (/\b(why|how|what|where|when|faq|question)\b/i.test(message)) {
+    fields.add("faqs");
+  }
+
+  return Array.from(fields);
+}
+
+const OPERATIONAL_FIELD_RULES = [
+  { field: "timings", label: "Timings", pattern: /\b(timing|timings|hours|open|close|opening|closing)\b/i, getValue: (place) => place.timings || place.hours || "" },
+  { field: "entry_fee", label: "Entry fee", pattern: /\b(entry fee|ticket|price|fee|cost|rs|inr|rupee|rupees)\b/i, getValue: (place) => {
+    const fee = Number(place.entry_fee || place.price || 0);
+    return fee ? `Rs ${fee}` : "";
+  } },
+  { field: "estimated_visit_duration", label: "Visit duration", pattern: /\b(duration|how long|time needed|hours needed)\b/i, getValue: (place) => place.estimated_visit_duration || "" },
+  { field: "category", label: "Category", pattern: /\b(category|type|kind|what is this place)\b/i, getValue: (place) => place.category || "" }
+];
+
+function pickRelevantFaqs(message, faqs = []) {
+  const normalizedMessage = String(message || "").toLowerCase();
+  const words = normalizedMessage.match(/[a-z0-9]+/g) || [];
+  const meaningfulWords = words.filter((word) => word.length > 3);
+
+  return faqs
+    .map(normalizeFaq)
+    .filter((faq) => hasTextValue(faq.question) || hasTextValue(faq.answer))
+    .filter((faq) => {
+      const faqText = `${faq.question} ${faq.answer}`.toLowerCase();
+      return meaningfulWords.some((word) => faqText.includes(word));
+    })
+    .slice(0, 3);
+}
+
+function addPromptField(lines, label, value) {
+  if (!hasTextValue(value)) {
+    return;
+  }
+
+  const text = Array.isArray(value)
+    ? value
+        .map((item) => {
+          if (typeof item === "string") {
+            return item;
+          }
+
+          const faq = normalizeFaq(item);
+          return [faq.question, faq.answer].filter(Boolean).join(" - ");
+        })
+        .filter(Boolean)
+        .join("; ")
+    : String(value);
+
+  if (text.trim()) {
+    lines.push(`${label}: ${text.trim()}`);
+  }
+}
+
+function selectRelevantAIContext({ message, aiContext, fallbackPlace }) {
+  const source = aiContext || {};
+  const lines = [];
+  const matchedRules = AI_CONTEXT_FIELD_RULES.filter((rule) => rule.pattern.test(message || ""));
+  const historyRule = AI_CONTEXT_FIELD_RULES.find((rule) => rule.field === "history");
+  const architectureRule = AI_CONTEXT_FIELD_RULES.find((rule) => rule.field === "architecture");
+  const cultureRule = AI_CONTEXT_FIELD_RULES.find((rule) => rule.field === "cultural_significance");
+  const hiddenFactsRule = AI_CONTEXT_FIELD_RULES.find((rule) => rule.field === "hidden_facts");
+  const rulesToUse = matchedRules.length ? matchedRules : [historyRule, architectureRule, cultureRule, hiddenFactsRule].filter(Boolean);
+
+  addPromptField(lines, "Short summary", source.short_summary);
+
+  rulesToUse.forEach((rule) => {
+    addPromptField(lines, rule.label, source[rule.field]);
+  });
+
+  const relevantFaqs = pickRelevantFaqs(message, source.faqs);
+  addPromptField(lines, "Relevant FAQs", relevantFaqs);
+
+  return {
+    lines,
+    source: aiContext ? "HeritageAIContext" : "Gemini general knowledge",
+    hasAIContext: Boolean(aiContext),
+    hasRelevantFields: lines.length > 0,
+    placeName: fallbackPlace?.name || "the current place"
+  };
+}
+
+function getPlaceQuestionStyle(message = "") {
+  if (/\b(history|historical|past|built|builder|founded|origin|shivaji|peshwa|maratha|dynasty|king|battle|capital)\b/i.test(message)) {
+    return "history";
+  }
+
+  if (/\b(architecture|design|structure|gate|wall|fortification|palace|material|layout|bastion|water|cistern)\b/i.test(message)) {
+    return "architecture";
+  }
+
+  if (/\b(fact|facts|hidden|secret|unknown|trivia|interesting|surprising)\b/i.test(message)) {
+    return "hidden_facts";
+  }
+
+  return "general";
+}
+
+function getResponseGuidance(message = "") {
+  const style = getPlaceQuestionStyle(message);
+
+  if (style === "history") {
+    return [
+      "Write 200 to 300 words.",
+      "Include an introduction to the monument, historical background, why it is important, important rulers or events, cultural significance, and one interesting fact at the end.",
+      "Make it descriptive, engaging, and guide-like."
+    ].join("\n");
+  }
+
+  if (style === "architecture") {
+    return [
+      "Write 150 to 250 words.",
+      "Explain architectural style, construction, materials, unique features, and importance.",
+      "Make the explanation vivid enough for a visitor standing at the monument."
+    ].join("\n");
+  }
+
+  if (style === "hidden_facts") {
+    return [
+      "Write 100 to 150 words.",
+      "Share interesting information tourists would enjoy, with a curious but factual tone."
+    ].join("\n");
+  }
+
+  return "Answer naturally and directly, without repeating greetings. Keep the response relevant to the current place.";
+}
+
+function selectOperationalContext({ message, place }) {
+  if (!place) {
+    return [];
+  }
+
+  return OPERATIONAL_FIELD_RULES.filter((rule) => rule.pattern.test(message || "")).reduce((lines, rule) => {
+    addPromptField(lines, rule.label, rule.getValue(place));
+    return lines;
+  }, []);
+}
+
+function shouldFetchNearbyContext(message = "") {
+  return /\b(nearby|near me|hotel|hotels|restaurant|restaurants|food|eat|transport|parking|route|routes|distance|attraction|attractions|around|near)\b/i.test(
+    message
+  );
+}
+
+function buildFocusedPlacePrompt({
+  currentPage,
+  place,
+  aiContextLines,
+  aiContextSource,
+  operationalLines,
+  nearbyHeritagePlaces,
+  nearbyServices,
+  budgetContext,
+  message
+}) {
+  const nearbyRequested = shouldFetchNearbyContext(message);
+  const responseGuidance = getResponseGuidance(message);
+  const budgetLines = budgetContext?.hasPlanningIntent
+    ? [
+        `Budget planning intent: yes`,
+        `Mentioned budget: ${budgetContext.amount ? `Rs ${budgetContext.amount}` : "not specified"}`,
+        `Trip duration: ${budgetContext.duration || "not specified"}`,
+        `Travel style/group: ${budgetContext.travelStyle || "not specified"}`
+      ].join("\n")
+    : "Budget planning intent: no";
+
+  return `You are TourVision's professional heritage guide.
+
+Respond like a knowledgeable heritage guide who explains monuments through cultural and historical storytelling. Do not begin with "Hello", "As your TourVision guide", or any repeated greeting. Answer directly.
+
+Use the provided HeritageAIContext fields first. If the relevant information is unavailable in HeritageAIContext, you may use your general heritage knowledge, but keep the answer clearly relevant to the current place. Do not invent live or operational details.
+
+Current page: ${currentPage || "Place"}
+Current place: ${place?.name || "selected heritage place"}
+Place ID: ${place?.place_id || "not listed"}
+
+Relevant AI knowledge source: ${aiContextSource}
+${aiContextLines.length ? aiContextLines.join("\n") : "No relevant AI knowledge fields were found."}
+
+Relevant operational facts from HeritagePlace:
+${operationalLines.length ? operationalLines.join("\n") : "No operational facts were needed for this question."}
+
+Nearby attractions from MongoDB:
+${nearbyRequested ? formatNearbyPlacesForPrompt(nearbyHeritagePlaces) : "Not requested."}
+
+Nearby hotels from MongoDB:
+${nearbyRequested ? formatServicesForPrompt(nearbyServices?.hotels) : "Not requested."}
+
+Nearby restaurants from MongoDB:
+${nearbyRequested ? formatServicesForPrompt(nearbyServices?.restaurants) : "Not requested."}
+
+Nearby transport and parking from MongoDB:
+${nearbyRequested ? [formatServicesForPrompt(nearbyServices?.transport), formatServicesForPrompt(nearbyServices?.parking)].join("\n") : "Not requested."}
+
+Budget/trip context:
+${budgetLines}
+
+User question:
+${message}
+
+Response rules:
+- Answer for the current place only unless nearby context was explicitly requested and provided.
+- Focus on heritage explanation, cultural meaning, history, architecture, and stories.
+- Do not duplicate basic place-page facts unless they directly answer the user's question.
+- Never include weather, routing, hotels, restaurants, transport, parking, or other live information unless the user explicitly asks for it.
+- Use operational facts only for direct operational questions.
+- If HeritageAIContext is missing relevant information, use general knowledge carefully and avoid claiming unsupported precision.
+- ${responseGuidance}
+- Do not use Markdown symbols, bullets, or headings with # characters.`;
 }
 
 async function getNearbyPlacesContext(origin, { excludePlace = null, limit = 8, radiusKm = 75 } = {}) {
@@ -481,7 +786,9 @@ async function postToMl(path, payload) {
 async function generateAiGuideReply({ currentPage = "Home", userLocation = null, selectedPlace = null, message }) {
   const isPlacePage = String(currentPage).toLowerCase() === "place";
   const normalizedUserLocation = isPlacePage ? null : normalizeUserLocation(userLocation);
-  const normalizedSelectedPlace = normalizeSelectedPlace(selectedPlace);
+  const resolvedHeritagePlace = isPlacePage ? await resolveHeritagePlace(selectedPlace) : null;
+  const placeForContext = resolvedHeritagePlace || selectedPlace;
+  const normalizedSelectedPlace = normalizeSelectedPlace(placeForContext);
   const contextOrigin =
     isPlacePage && normalizedSelectedPlace?.latitude !== null && normalizedSelectedPlace?.longitude !== null
       ? { lat: normalizedSelectedPlace.latitude, lng: normalizedSelectedPlace.longitude }
@@ -491,20 +798,51 @@ async function generateAiGuideReply({ currentPage = "Home", userLocation = null,
         ? { lat: normalizedUserLocation.latitude, lng: normalizedUserLocation.longitude }
         : null;
   const budgetContext = extractBudgetContext(message);
-  const nearbyHeritagePlaces = await getNearbyPlacesContext(contextOrigin, {
-    excludePlace: isPlacePage ? normalizedSelectedPlace : null
-  });
-  const nearbyServices = await getNearbyServicesContext(contextOrigin);
+  const shouldIncludeNearbyContext = !isPlacePage || shouldFetchNearbyContext(message);
+  const aiContextFields = getRelevantAIContextFields(message);
+  const [nearbyHeritagePlaces, nearbyServices, heritageAIContext] = await Promise.all([
+    shouldIncludeNearbyContext
+      ? getNearbyPlacesContext(contextOrigin, {
+          excludePlace: isPlacePage ? normalizedSelectedPlace : null
+        })
+      : Promise.resolve([]),
+    shouldIncludeNearbyContext ? getNearbyServicesContext(contextOrigin) : Promise.resolve({ hotels: [], restaurants: [], transport: [], parking: [] }),
+    resolvedHeritagePlace?.place_id
+      ? HeritageAIContext.findOne({ place_id: resolvedHeritagePlace.place_id })
+          .select(aiContextFields.join(" "))
+          .lean()
+      : Promise.resolve(null)
+  ]);
 
-  const prompt = buildTourismPrompt({
-    currentPage,
-    userLocation: normalizedUserLocation,
-    selectedPlace: normalizedSelectedPlace,
-    nearbyHeritagePlaces,
-    nearbyServices,
-    budgetContext,
-    message
-  });
+  const selectedAIContext = isPlacePage
+    ? selectRelevantAIContext({
+        message,
+        aiContext: heritageAIContext,
+        fallbackPlace: resolvedHeritagePlace || selectedPlace
+      })
+    : null;
+  const prompt =
+    isPlacePage && normalizedSelectedPlace
+      ? buildFocusedPlacePrompt({
+          currentPage,
+          place: resolvedHeritagePlace || selectedPlace,
+          aiContextLines: selectedAIContext.lines,
+          aiContextSource: selectedAIContext.source,
+          operationalLines: selectOperationalContext({ message, place: resolvedHeritagePlace || selectedPlace }),
+          nearbyHeritagePlaces,
+          nearbyServices,
+          budgetContext,
+          message
+        })
+      : buildTourismPrompt({
+          currentPage,
+          userLocation: normalizedUserLocation,
+          selectedPlace: normalizedSelectedPlace,
+          nearbyHeritagePlaces,
+          nearbyServices,
+          budgetContext,
+          message
+        });
 
   const model = getGeminiModel();
   console.log("Using model:", getGeminiModelName());
@@ -525,6 +863,8 @@ async function generateAiGuideReply({ currentPage = "Home", userLocation = null,
       currentPage,
       userLocation: normalizedUserLocation,
       selectedPlace: normalizedSelectedPlace,
+      aiContextSource: selectedAIContext?.source || null,
+      aiContextPlaceId: resolvedHeritagePlace?.place_id || null,
       nearbyHeritageCount: nearbyHeritagePlaces.length,
       nearbyServices,
       budget: budgetContext
