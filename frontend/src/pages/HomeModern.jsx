@@ -255,7 +255,7 @@ export default function HomeModern() {
 
     setScannerOpen(false);
     toast.success(`CNN matched ${result?.name || "a landmark"}.`);
-    navigate(`/place/${placeId}`);
+    navigate(`/qr-heritage/${placeId}`);
   };
 
   const greeting = user?.name ? `Hi, ${user.name}` : "Welcome to TourVision";

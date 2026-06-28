@@ -20,9 +20,51 @@ import { useLocationContext } from '../context/LocationContext';
 import { clonePlaceContent, findPlaceContent } from '../content/placeContent';
 import { useGeofence } from '../hooks/useGeofence';
 import { getGeofenceStatusForPlace } from '../utils/geoUtils';
+import { getPlaceLocationLabel } from '../utils/normalizePlace';
 import { resolvePlaceImage } from '../utils/placeImages';
 
 const TABS = ['Overview', 'AI Guide', 'Nearby Services'];
+const PLACE_GUIDE_IMAGES = [
+  {
+    match: /sinhagad|sinhgad/i,
+    hero: 'https://commons.wikimedia.org/wiki/Special:FilePath/Sinhagad_Fort_(75834).jpg?width=1600',
+    history: 'https://commons.wikimedia.org/wiki/Special:FilePath/Tanaji.jpg?width=900',
+    architecture:
+      'https://commons.wikimedia.org/wiki/Special:FilePath/Pune_Darwaza_-_Sinhagad_Fort_(2).jpg?width=900',
+    mainSpots:
+      'https://commons.wikimedia.org/wiki/Special:FilePath/Sinhagadfort_konadsheswartemple1_utsav.JPG?width=900'
+  },
+  {
+    match: /raigad/i,
+    hero: 'https://commons.wikimedia.org/wiki/Special:FilePath/Raigad_fort_(96344).jpg?width=1600',
+    history:
+      'https://commons.wikimedia.org/wiki/Special:FilePath/Chhatrapati_Shivaji_Maharaj_Samadhi_Raigad.jpg?width=900',
+    architecture: 'https://commons.wikimedia.org/wiki/Special:FilePath/Raigad_Maha_Darwaja.jpg?width=900',
+    mainSpots:
+      'https://commons.wikimedia.org/wiki/Special:FilePath/Old_masjid_of_Fort_Raigad.jpg?width=900'
+  },
+  {
+    match: /shaniwar|wada/i,
+    hero: 'https://commons.wikimedia.org/wiki/Special:FilePath/Entrance_of_Shaniwar_Wada%2C_Pune.jpg?width=1600',
+    history: 'https://commons.wikimedia.org/wiki/Special:FilePath/Shaniwar_Wada%2C_Pune.jpg?width=900',
+    architecture: 'https://commons.wikimedia.org/wiki/Special:FilePath/Shaniwar_Wada.jpg?width=900',
+    mainSpots: 'https://commons.wikimedia.org/wiki/Special:FilePath/Shaniwar_wada_garden.jpg?width=900'
+  }
+];
+
+function getPlaceGuideImages(place) {
+  const key = `${place?.name || ''} ${place?.place_id || ''} ${place?.slug || ''}`;
+  return PLACE_GUIDE_IMAGES.find((images) => images.match.test(key)) || null;
+}
+
+function getSectionImage(images, section, fallback) {
+  if (!images) return section?.image || section?.image_url || section?.thumbnail || section?.photo || fallback;
+  const key = `${section?.id || ''} ${section?.title || section?.name || section?.label || ''}`;
+  if (/history|overview/i.test(key)) return images.history;
+  if (/architect|gate|entrance/i.test(key)) return images.architecture;
+  if (/main|spot|highlight|best-time|visit/i.test(key)) return images.mainSpots;
+  return section?.image || section?.image_url || section?.thumbnail || section?.photo || fallback;
+}
 const WEATHER_CODE_LABELS = {
   0: 'Clear sky',
   1: 'Mainly clear',
@@ -490,10 +532,13 @@ function buildCompleteHeritageNarration(place, language = 'en') {
 }
 
 const createGuideSections = (place) => {
-  const image = resolvePlaceImage(
-    place,
-    'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=900&auto=format&fit=crop&q=80'
-  );
+  const curatedImages = getPlaceGuideImages(place);
+  const image =
+    curatedImages?.hero ||
+    resolvePlaceImage(
+      place,
+      'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=900&auto=format&fit=crop&q=80'
+    );
   const normalizeSection = (section, index, source = 'section') => {
     const title = section?.title || section?.name || section?.label || section?.heading;
     const content =
@@ -515,7 +560,7 @@ const createGuideSections = (place) => {
       id: section?.id || section?._id || section?.slug || `${String(baseId).toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${index}`,
       title: title || `Heritage point ${index + 1}`,
       content,
-      image: section?.image || section?.image_url || section?.thumbnail || section?.photo || image
+      image: getSectionImage(curatedImages, section, image)
     };
   };
 
@@ -585,19 +630,19 @@ const createGuideSections = (place) => {
         id: 'history',
         title: 'History',
         content: `${placeName} has a story shaped by ${city}. ${description}`,
-        image
+        image: curatedImages?.history || image
       },
       {
         id: 'architecture',
         title: 'Architecture',
         content: `${placeName} is presented as a ${category} experience. Notice the layout, materials, entrances, viewpoints, and how the space guides visitors through the site.`,
-        image
+        image: curatedImages?.architecture || image
       },
       {
         id: 'main-spots',
         title: 'Main spots',
         content: `At ${placeName}, focus on the main viewpoints, visitor areas, photo spots, and nearby highlights. It is best for ${bestFor}.${hours}`,
-        image
+        image: curatedImages?.mainSpots || image
       }
     ]
   };
@@ -652,6 +697,11 @@ export default function PlacePage() {
   }, [isInsideLocal, localGeofenceState, serverGeofenceState]);
   const isInsideGeofence = Boolean(geofenceState.inside);
   const gallery = useMemo(() => {
+    const curatedImages = getPlaceGuideImages(place);
+    if (curatedImages) {
+      return [curatedImages.hero, curatedImages.history, curatedImages.architecture, curatedImages.mainSpots];
+    }
+
     const managedContent = findPlaceContent(place?.place_id || place?.id || place?.slug || place?.name);
     if (managedContent?.image) {
       return [managedContent.image, ...(managedContent.images || []).filter((image) => image !== managedContent.image)];
@@ -1024,7 +1074,7 @@ export default function PlacePage() {
         <div className="mt-8">
           <PlaceGallery
             gallery={gallery}
-            locationName={place?.location_name || place?.location || place?.city || 'TourVision destination'}
+            locationName={getPlaceLocationLabel(place)}
             mobileGallery={mobileGallery}
             onStartGuide={handleStartTour}
             placeName={place?.name}

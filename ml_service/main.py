@@ -2,15 +2,21 @@ import os
 from typing import Any
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, File, UploadFile
+from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from PIL import UnidentifiedImageError
 from pydantic import BaseModel, Field
+
+from heritage_cnn import build_recognition_response, get_model, model_status, predict_image
 
 load_dotenv()
 
 
 def parse_allowed_origins() -> list[str]:
-    raw = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173,http://localhost:5000")
+    raw = os.getenv(
+        "ALLOWED_ORIGINS",
+        "http://localhost:5173,http://127.0.0.1:5173,http://localhost:5000,http://127.0.0.1:5000",
+    )
     return [item.strip() for item in raw.split(",") if item.strip()]
 
 
@@ -23,6 +29,13 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.on_event("startup")
+def warm_recognition_model() -> None:
+    """Load the CNN once so the first visitor does not pay TensorFlow startup time."""
+    if model_status()["model_exists"]:
+        get_model()
 
 
 class ChatRequest(BaseModel):
@@ -70,30 +83,43 @@ def health() -> dict[str, Any]:
         "ok": True,
         "service": "tourvision-ml",
         "port": int(os.getenv("PORT", "8000")),
+        "recognition": model_status(),
     }
 
 
 @app.post("/recognize")
 async def recognize(image: UploadFile = File(...)) -> dict[str, Any]:
-    filename = (image.filename or "").lower()
-    guessed_name = "Amber Fort"
+    if image.content_type and not image.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="Please upload a valid image file.")
 
-    if "museum" in filename:
-        guessed_name = "City Museum"
-    elif "gate" in filename:
-        guessed_name = "Gateway of India"
-    elif "tomb" in filename:
-        guessed_name = "Humayun Tomb"
+    image_bytes = await image.read()
+    if not image_bytes:
+        raise HTTPException(status_code=400, detail="The uploaded image is empty.")
+    if len(image_bytes) > 10 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="Image must be smaller than 10 MB.")
 
-    return {
-        "name": guessed_name,
-        "facts": [
-            f"{guessed_name} is recognized by the TourVision ML service.",
-            "This fallback response keeps frontend and backend wiring testable.",
-            "Replace this with your production recognition pipeline when ready.",
-        ],
-        "confidence": 0.95,
-    }
+    try:
+        prediction = predict_image(image_bytes)
+        return build_recognition_response(prediction)
+    except (UnidentifiedImageError, OSError, ValueError) as error:
+        raise HTTPException(
+            status_code=400,
+            detail="The file could not be read as an image. Try a JPG, PNG, or WebP file.",
+        ) from error
+    except FileNotFoundError as error:
+        status = model_status()
+        return {
+            "name": "Heritage Recognition Model Not Trained",
+            "confidence": 0.0,
+            "is_confident": False,
+            "facts": [
+                "The CNN code is ready, but the combined trained model file is missing.",
+                "Train it with: python training/train_heritage_cnn.py",
+                "Default raw data path: C:\\Users\\91801\\OneDrive\\Desktop\\AI Heritage\\data\\raw",
+            ],
+            "error": str(error),
+            "recognition": status,
+        }
 
 
 @app.post("/chat")

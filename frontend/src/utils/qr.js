@@ -52,6 +52,7 @@ export function parsePlaceIdFromImageResult(result) {
 
   const payload = result.data || result.result || result.prediction || result;
   const source =
+    payload.place ||
     payload.place_id ||
     payload.placeId ||
     payload.id ||

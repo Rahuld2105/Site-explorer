@@ -95,7 +95,7 @@ export default function BottomNav() {
 
     setScannerOpen(false);
     toast.success(`CNN matched ${result?.name || 'a landmark'}.`);
-    navigate(`/place/${placeId}`);
+    navigate(`/qr-heritage/${placeId}`);
   };
 
   const tabs = [

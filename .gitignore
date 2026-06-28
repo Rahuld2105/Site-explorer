@@ -4,3 +4,7 @@ ml_service/.env
 
 node_modules/
 **/node_modules/
+**/.venv/
+ml_service/training/mobilenet_v2_weights.h5
+**/__pycache__/
+*.pyc

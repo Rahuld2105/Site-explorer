@@ -27,12 +27,15 @@ function getGeminiModelName() {
 
 function hasGeminiApiKey() {
   const apiKey = (process.env.GEMINI_API_KEY || "").trim();
-  return Boolean(apiKey && apiKey !== "your_api_key_here" && apiKey !== "your_new_gemini_api_key_here");
+  return Boolean(apiKey);
 }
 
 function logGeminiStartupStatus() {
-  console.log(`Gemini API Key: ${hasGeminiApiKey() ? "FOUND" : "MISSING"}`);
-  console.log(`Using model: ${getGeminiModelName()}`);
+  const apiKey = (process.env.GEMINI_API_KEY || "").trim();
+  console.log(
+    `[Gemini] GEMINI_API_KEY: ${apiKey ? `FOUND (${apiKey.length} characters)` : "MISSING"}`
+  );
+  console.log(`[Gemini] SDK: @google/generative-ai; model: ${getGeminiModelName()}`);
 }
 
 function cleanAiDisplayText(text) {
@@ -706,10 +709,11 @@ Response rules:
 function getGeminiApiKey() {
   const apiKey = (process.env.GEMINI_API_KEY || "").trim();
 
-  if (!hasGeminiApiKey()) {
-    const error = new Error("Gemini API key is not configured.");
+  if (!apiKey) {
+    const error = new Error("GEMINI_API_KEY is missing from the backend environment.");
+    error.code = "GEMINI_API_KEY_MISSING";
     error.statusCode = 503;
-    error.publicMessage = "Gemini API key is not configured.";
+    error.publicMessage = "Gemini API key is not configured. Check backend/.env and restart the backend.";
     throw error;
   }
 
@@ -717,15 +721,21 @@ function getGeminiApiKey() {
 }
 
 function getGeminiModel() {
-  const genAI = new GoogleGenerativeAI(getGeminiApiKey());
-
-  return genAI.getGenerativeModel({
-    model: getGeminiModelName()
-  });
+  try {
+    const genAI = new GoogleGenerativeAI(getGeminiApiKey());
+    return genAI.getGenerativeModel({ model: getGeminiModelName() });
+  } catch (error) {
+    if (error.code === "GEMINI_API_KEY_MISSING") {
+      throw error;
+    }
+    error.code = error.code || "GEMINI_INITIALIZATION_FAILED";
+    throw error;
+  }
 }
 
 function getGeminiErrorDetails(error) {
   return {
+    category: error?.code || "GEMINI_REQUEST_FAILED",
     status: error?.status || error?.statusCode || error?.response?.status || null,
     statusText: error?.statusText || error?.response?.statusText || null,
     message: error?.message || null,
