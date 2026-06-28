@@ -314,7 +314,10 @@ const heritagePlaceSchema = new mongoose.Schema(
       default: false
     }
   },
-  buildSchemaOptions()
+  // The existing TourVision heritage data is stored in `heritageplace`.
+  // Set the collection explicitly because Mongoose would otherwise pluralize
+  // the model name to `heritageplaces`, which is a different collection.
+  buildSchemaOptions({ collection: "heritageplace" })
 );
 
 // Index for location-based queries

@@ -1,0 +1,157 @@
+{
+  "places": [
+    {
+      "label": "Sinhgad - Kalyan darwaza",
+      "name": "Kalyan Darwaza",
+      "site": "Sinhgad Fort",
+      "place_id": "kalyan-darwaja-sinhagad",
+      "description": "Kalyan Darwaza is one of the historic entrances of Sinhgad Fort, known for its stone gateway, defensive architecture, and route used by trekkers approaching the fort.",
+      "historical_importance": "The gateway is linked with Sinhgad's defensive history and the Maratha-period fortification of the hill fort.",
+      "facts": [
+        "One of the two important entrances to Sinhgad Fort.",
+        "Known for Maratha defensive stone architecture.",
+        "Popular with visitors approaching from the trekking side.",
+        "The fort was earlier known as Kondhana.",
+        "It offers views of the surrounding Sahyadri ranges."
+      ],
+      "timings": "5:00 AM - 6:00 PM",
+      "entry_fee": 20
+    },
+    {
+      "label": "Sinhgad - Kondhaneshwar Temple",
+      "name": "Kondhaneshwar Temple",
+      "site": "Sinhgad Fort",
+      "place_id": "kondhaneshwar-temple-sinhagad",
+      "description": "Kondhaneshwar Temple is an ancient Shiva temple on Sinhgad Fort and is considered one of the fort's spiritually important locations.",
+      "historical_importance": "The temple is associated with the older Kondhana identity of the fort and reflects the long religious and cultural history of the site.",
+      "facts": [
+        "Dedicated to Lord Shiva.",
+        "Considered one of the oldest structures on the fort.",
+        "Associated with the old name Kondhana.",
+        "A significant spiritual stop for visitors.",
+        "Located within the historic Sinhgad Fort area."
+      ],
+      "timings": "5:00 AM - 6:00 PM",
+      "entry_fee": 20
+    },
+    {
+      "label": "Sinhgad - Pune darwaza",
+      "name": "Pune Darwaza",
+      "site": "Sinhgad Fort",
+      "place_id": "pune-darwaja-sinhagad",
+      "description": "Pune Darwaza is the main entrance used by many visitors to enter Sinhgad Fort from the Pune side.",
+      "historical_importance": "It served as a principal access point to the fort and reflects the strategic importance of Sinhgad in Maratha history.",
+      "facts": [
+        "Main entrance to Sinhgad Fort from the Pune side.",
+        "Connected by a motorable road.",
+        "Protected by stone walls and bastions.",
+        "Sinhgad was formerly called Kondhana Fort.",
+        "A frequent starting point for tourists exploring the fort."
+      ],
+      "timings": "5:00 AM - 6:00 PM",
+      "entry_fee": 20
+    },
+    {
+      "label": "Sinhgad - Rajaram Samadhi",
+      "name": "Chhatrapati Rajaram Maharaj Samadhi",
+      "site": "Sinhgad Fort",
+      "place_id": "rajaram-maharaj-samadhi-sinhagad",
+      "description": "The Samadhi of Chhatrapati Rajaram Maharaj is a memorial located on Sinhgad Fort.",
+      "historical_importance": "Rajaram Maharaj led the Maratha Empire during a difficult period after Sambhaji Maharaj, and the memorial marks his connection with Sinhgad.",
+      "facts": [
+        "Rajaram Maharaj was Shivaji Maharaj's younger son.",
+        "He became the third Chhatrapati.",
+        "He died at Sinhgad in 1700.",
+        "The memorial is an important historical stop on the fort.",
+        "It represents the fort's connection with Maratha leadership."
+      ],
+      "timings": "5:00 AM - 6:00 PM",
+      "entry_fee": 20
+    },
+    {
+      "label": "Sinhgad - Tanaji Machi",
+      "name": "Tanaji Machi",
+      "site": "Sinhgad Fort",
+      "place_id": "tanaji-machi-sinhagad",
+      "description": "Tanaji Machi is a historically significant point associated with Subhedar Tanaji Malusare and the Battle of Sinhgad.",
+      "historical_importance": "The place is connected with the 1670 Battle of Sinhgad, where Tanaji Malusare and Maratha forces fought to recapture the fort.",
+      "facts": [
+        "Associated with Tanaji Malusare's daring attack.",
+        "Linked to the Battle of Sinhgad in 1670.",
+        "The phrase 'Gad Ala Pan Sinh Gela' is associated with this battle.",
+        "The fort was renamed Sinhgad after Tanaji's sacrifice.",
+        "The location offers strong historical storytelling value."
+      ],
+      "timings": "5:00 AM - 6:00 PM",
+      "entry_fee": 20
+    },
+    {
+      "label": "Raigad - Hirkani Buruj",
+      "name": "Hirkani Buruj",
+      "site": "Raigad Fort",
+      "place_id": "hirkani-buruj-raigad",
+      "description": "Hirkani Buruj is a famous bastion on Raigad Fort associated with the legendary courage of Hirkani, a milkmaid who is said to have climbed down the steep cliff at night to reach her child.",
+      "historical_importance": "The bastion preserves one of Raigad's most loved stories of courage and motherhood from the Maratha period. Chhatrapati Shivaji Maharaj is believed to have honored Hirkani's bravery by naming the bastion after her.",
+      "facts": [
+        "Located on a steep cliff edge of Raigad Fort.",
+        "Associated with the story of Hirkani's night descent.",
+        "Represents courage, devotion, and maternal love.",
+        "Named in memory of Hirkani's bravery.",
+        "A popular viewpoint and storytelling location on Raigad."
+      ],
+      "timings": "8:00 AM - 6:00 PM",
+      "entry_fee": 0
+    },
+    {
+      "label": "Raigad - Jagadishwar Temple",
+      "name": "Jagadishwar Temple",
+      "site": "Raigad Fort",
+      "place_id": "jagadishwar-temple-raigad",
+      "description": "Jagadishwar Temple is a historic Shiva temple situated within Raigad Fort. Built in 1674 by Chhatrapati Shivaji Maharaj, it served as the royal place of worship.",
+      "historical_importance": "The temple was designed by Hiroji Indulkar and combines traditional Hindu architecture with subtle Mughal-style influences. Shivaji Maharaj is believed to have visited this temple daily for worship, and it stands close to his samadhi.",
+      "facts": [
+        "Built in 1674 during the coronation year of Chhatrapati Shivaji Maharaj.",
+        "Designed by architect Hiroji Indulkar.",
+        "Dedicated to Lord Shiva.",
+        "Features a Nandi idol and Shivling.",
+        "Located near Chhatrapati Shivaji Maharaj's Samadhi."
+      ],
+      "timings": "8:00 AM - 6:00 PM",
+      "entry_fee": 0
+    },
+    {
+      "label": "Raigad - Nagarkhana Darwaja",
+      "name": "Nagarkhana Darwaja",
+      "site": "Raigad Fort",
+      "place_id": "nagarkhana-darwaja-raigad",
+      "description": "Nagarkhana Darwaja is the grand entrance gateway to the Raj Sabha of Raigad Fort, standing opposite the throne of Chhatrapati Shivaji Maharaj.",
+      "historical_importance": "It functioned as the royal drum house where instruments such as the nagara and dhol were played for ceremonies, royal arrivals, meetings, and security alerts. The gateway is also known for its acoustic engineering.",
+      "facts": [
+        "Located directly in front of Shivaji Maharaj's throne.",
+        "Functioned as the royal drum house.",
+        "Known for exceptional acoustic engineering.",
+        "A soft voice near the entrance can carry toward the throne area.",
+        "Served ceremonial, military, and administrative purposes."
+      ],
+      "timings": "8:00 AM - 6:00 PM",
+      "entry_fee": 0
+    },
+    {
+      "label": "Raigad - Shivaji Maharaj Samadhi",
+      "name": "Chhatrapati Shivaji Maharaj Samadhi",
+      "site": "Raigad Fort",
+      "place_id": "shivaji-maharaj-samadhi-raigad",
+      "description": "The Samadhi of Chhatrapati Shivaji Maharaj is the final resting place of the founder of the Maratha Empire, located on Raigad Fort.",
+      "historical_importance": "After Shivaji Maharaj's passing on 3 April 1680, Chhatrapati Sambhaji Maharaj built the original octagonal stone samadhi here. The memorial was later rediscovered by Mahatma Jyotirao Phule and restored through public efforts inspired by Lokmanya Tilak.",
+      "facts": [
+        "Built by Chhatrapati Sambhaji Maharaj.",
+        "Features an octagonal black stone platform.",
+        "Located near Jagadishwar Temple.",
+        "Rediscovered by Mahatma Jyotirao Phule in 1869.",
+        "Restoration efforts were later supported by Lokmanya Tilak."
+      ],
+      "timings": "8:00 AM - 6:00 PM",
+      "entry_fee": 0
+    }
+  ]
+}

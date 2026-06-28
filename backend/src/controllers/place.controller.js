@@ -49,8 +49,8 @@ async function findTourPlaceByIdentifier(id) {
   }
 
   const heritageQuery = mongoose.Types.ObjectId.isValid(id)
-    ? { $or: [{ _id: id }, { place_id: id }, { slug: id }] }
-    : { $or: [{ place_id: id }, { slug: id }] };
+    ? { $or: [{ _id: id }, { place_id: id }, { qr_id: id }, { slug: id }] }
+    : { $or: [{ place_id: id }, { qr_id: id }, { slug: id }] };
   const heritagePlace = await HeritagePlace.findOne(heritageQuery);
 
   return heritagePlace ? { place: heritagePlace, source: "heritage" } : null;
@@ -758,13 +758,11 @@ const getPlaceAiContent = asyncHandler(async (req, res) => {
 
 const scanQr = asyncHandler(async (req, res) => {
   const qrId = String(req.body.qr_id || req.body.qr_data || "").trim();
-  console.log("Received QR:", qrId);
 
   if (!qrId) {
     return failure(res, 400, "qr_id or qr_data is required.");
   }
 
-  console.log("Searching HeritagePlace...");
   const exactQrIdPattern = new RegExp(`^${escapeRegex(qrId)}$`, "i");
   const place = await HeritagePlace.findOne({
     $or: [
@@ -776,41 +774,16 @@ const scanQr = asyncHandler(async (req, res) => {
   const source = "heritage";
 
   if (!place) {
-    console.log("No matching place found");
-    console.log(
-      await HeritagePlace.find(
-        {},
-        {
-          name: 1,
-          place_id: 1,
-          qr_id: 1,
-        },
-      ),
-    );
     return failure(res, 404, "No place found for this QR code.");
   }
 
-  try {
- await HeritagePlace.updateOne(
-  { _id: place._id },
-  {
-    $set: {
-      "qr_stats.last_scan_at": new Date()
+  await HeritagePlace.updateOne(
+    { _id: place._id },
+    {
+      $set: { "qr_stats.last_scan_at": new Date() },
+      $inc: { "qr_stats.total_scans": 1 },
     },
-    $inc: {
-      "qr_stats.total_scans": 1
-    }
-  }
-);
-
-  console.log("SAVE SUCCESS");
-} catch (err) {
-  console.error("SAVE ERROR:");
-  console.error(err);
-  throw err;
-}
-
-console.log("BEFORE RESPONSE");
+  );
 
   return res.status(200).json({
     success: true,

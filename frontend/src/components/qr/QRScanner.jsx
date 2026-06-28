@@ -12,6 +12,7 @@ function extractRecognitionPayload(response) {
 function getRecognitionName(result) {
   return (
     result?.name ||
+    result?.place ||
     result?.label ||
     result?.classification ||
     result?.class_name ||
@@ -171,11 +172,18 @@ export default function QRScanner({ isOpen = true, onClose, onDetected, onImageD
       const response = await recognizeImage(formData);
       const result = extractRecognitionPayload(response);
       setImageResult(result);
+
+      if (result?.is_confident === false || result?.place_id === 'unknown-or-unsupported') {
+        setImageError(result?.description || 'Unable to confidently identify this place.');
+        return;
+      }
+
       await onImageDetected?.(result);
     } catch (error) {
       console.error('Image recognition failed:', error);
       setImageError(
-        error?.response?.data?.message ||
+        error?.response?.data?.detail ||
+          error?.response?.data?.message ||
           error?.message ||
           'Image scan failed. Make sure the ML service is running and try again.'
       );

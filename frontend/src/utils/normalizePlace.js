@@ -1,6 +1,21 @@
 import { FALLBACK_PLACES } from '../constants/homeData';
 import { resolvePlaceImage } from './placeImages';
 
+export function getPlaceLocationLabel(place) {
+  const coordinates = place?.coordinates || place?.location?.coordinates || place?.geometry?.coordinates;
+  const lat = Number(place?.lat ?? place?.latitude ?? coordinates?.lat ?? coordinates?.[1] ?? place?.location?.lat);
+  const lng = Number(place?.lng ?? place?.longitude ?? coordinates?.lng ?? coordinates?.[0] ?? place?.location?.lng);
+
+  return (
+    place?.location_name ||
+    place?.city ||
+    (typeof place?.location === 'string' ? place.location : '') ||
+    (Number.isFinite(lat) && Number.isFinite(lng)
+      ? `${lat.toFixed(3)}, ${lng.toFixed(3)}`
+      : 'TourVision destination')
+  );
+}
+
 /**
  * Normalizes a raw place object (from API) into the shape the UI expects.
  * @param {object} place - Raw place data
@@ -13,11 +28,7 @@ export function normalizePlace(place, index) {
     Number(place.lat ?? place.latitude ?? coordinates?.lat ?? coordinates?.[1] ?? place.location?.lat);
   const lng =
     Number(place.lng ?? place.longitude ?? coordinates?.lng ?? coordinates?.[0] ?? place.location?.lng);
-  const safeLocation =
-    place.location_name ||
-    place.city ||
-    (typeof place.location === 'string' ? place.location : '') ||
-    (Number.isFinite(lat) && Number.isFinite(lng) ? `${lat.toFixed(3)}, ${lng.toFixed(3)}` : 'TourVision destination');
+  const safeLocation = getPlaceLocationLabel(place);
 
   return {
     id: place.id || index + 1,

@@ -1,7 +1,14 @@
-require("dotenv").config();
+const path = require("path");
+const envPath = path.join(__dirname, ".env");
+const envResult = require("dotenv").config({ path: envPath });
+
+if (envResult.error) {
+  console.error(`[Config] Failed to load ${envPath}: ${envResult.error.message}`);
+} else {
+  console.log(`[Config] Loaded environment from ${envPath}`);
+}
 
 const http = require("http");
-const path = require("path");
 const express = require("express");
 const cors = require("cors");
 const morgan = require("morgan");

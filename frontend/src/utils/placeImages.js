@@ -1,6 +1,8 @@
 export const KNOWN_PLACE_IMAGES = {
-  shaniwar_wada: 'https://commons.wikimedia.org/wiki/Special:FilePath/Shaniwar_Wada_Pune.jpg?width=900',
-  sinhagad_fort: 'https://commons.wikimedia.org/wiki/Special:FilePath/Sinhagad-Fort.jpg?width=900'
+  rajgad_fort: '/images/rajgad-fort.jpg',
+  raigad_fort: 'https://commons.wikimedia.org/wiki/Special:FilePath/Raigad_fort_(96344).jpg?width=1200',
+  shaniwar_wada: 'https://commons.wikimedia.org/wiki/Special:FilePath/Entrance_of_Shaniwar_Wada%2C_Pune.jpg?width=1200',
+  sinhagad_fort: 'https://commons.wikimedia.org/wiki/Special:FilePath/Sinhagad_Fort_(75834).jpg?width=1200'
 };
 
 const GENERIC_IMAGE_PATTERNS = [
@@ -27,6 +29,14 @@ function getPlaceSearchText(place) {
 
 export function getKnownPlaceImage(place) {
   const text = getPlaceSearchText(place);
+
+  if (text.includes('rajgad')) {
+    return KNOWN_PLACE_IMAGES.rajgad_fort;
+  }
+
+  if (text.includes('raigad')) {
+    return KNOWN_PLACE_IMAGES.raigad_fort;
+  }
 
   if (text.includes('shaniwar') || text.includes('shanivar')) {
     return KNOWN_PLACE_IMAGES.shaniwar_wada;

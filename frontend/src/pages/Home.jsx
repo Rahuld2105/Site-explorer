@@ -3,8 +3,11 @@ import PropTypes from "prop-types";
 import { motion } from "framer-motion";
 import { useLocation, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
+import { getPlaceById } from "../api/placeApi";
+import { extractData } from "../api/responseUtils";
 import QRScanner from "../components/qr/QRScanner";
 import { FeedbackSection } from "./FeedbackPage";
+import { resolvePlaceImage } from "../utils/placeImages";
 import { parsePlaceIdFromImageResult } from "../utils/qr";
 import { openQrHeritagePage } from "../utils/qrNavigation";
 
@@ -55,30 +58,32 @@ const FEATURES = [
   }
 ];
 
-const POPULAR_FORTS = [
-  {
-    id: "rajgad",
-    name: "Rajgad",
-    location: "Pune, Maharashtra",
-    image: "/images/rajgad-fort.jpg",
-    body: "A Maratha capital fort with AI narration, guided sections, and place-aware exploration."
-  },
-  {
-    id: "sinhagad",
-    name: "Sinhagad",
-    location: "Pune, Maharashtra",
-    image: "https://commons.wikimedia.org/wiki/Special:FilePath/Sinhagad.jpg?width=900",
-    body: "A dramatic hill fort near Pune for nearby discovery, route planning, and guided visits."
-  },
-  {
-    id: "shaniwar-wada",
-    name: "Shaniwar Wada",
-    location: "Pune, Maharashtra",
-    image: "https://commons.wikimedia.org/wiki/Special:FilePath/Shaniwar_Wada_Pune.jpg?width=900",
-    body: "A city heritage landmark built for short exploration flows, QR scans, and AI context."
-  }
-  
-];
+const RAJGAD_FORT = {
+  id: "rajgad",
+  name: "Rajgad",
+  location: "Pune, Maharashtra",
+  image: "/images/rajgad-fort.jpg",
+  body: "A Maratha capital fort with AI narration, guided sections, and place-aware exploration."
+};
+
+const BACKEND_FORT_IDS = ["sinhagad_fort", "shaniwar_wada"];
+const HOME_DESTINATION_IMAGES = {
+  sinhagad_fort:
+    "https://commons.wikimedia.org/wiki/Special:FilePath/Sinhagad_Fort_(75834).jpg?width=1200",
+  shaniwar_wada:
+    "https://commons.wikimedia.org/wiki/Special:FilePath/Entrance_of_Shaniwar_Wada%2C_Pune.jpg?width=1200"
+};
+
+function toDestinationCard(place) {
+  const id = place.place_id || place.id;
+  return {
+    id,
+    name: place.name,
+    location: place.location_name || [place.city, place.state].filter(Boolean).join(", ") || "Maharashtra",
+    image: HOME_DESTINATION_IMAGES[id] || resolvePlaceImage(place),
+    body: place.description_en || place.description || "Explore this heritage destination with TourVision."
+  };
+}
 
 const WORKFLOW = [
   { label: "Scan QR/Image", icon: "01" },
@@ -188,6 +193,26 @@ export default function Home() {
   const navigate = useNavigate();
   const location = useLocation();
   const [scannerOpen, setScannerOpen] = useState(false);
+  const [popularForts, setPopularForts] = useState([RAJGAD_FORT]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    Promise.all(BACKEND_FORT_IDS.map((id) => getPlaceById(id)))
+      .then((responses) => {
+        if (!isMounted) return;
+        const backendForts = responses
+          .map((response) => extractData(response)?.place)
+          .filter(Boolean)
+          .map(toDestinationCard);
+        setPopularForts([RAJGAD_FORT, ...backendForts]);
+      })
+      .catch((error) => console.warn("Unable to load home destinations from backend.", error));
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     const openScanner = () => setScannerOpen(true);
@@ -223,7 +248,7 @@ export default function Home() {
 
     setScannerOpen(false);
     toast.success(`CNN matched ${result?.name || "a landmark"}.`);
-    navigate(`/place/${placeId}`);
+    navigate(`/qr-heritage/${placeId}`);
   };
 
   const openPlace = (fort) => {
@@ -352,7 +377,7 @@ export default function Home() {
             </button>
           </div>
           <div className="mt-10 grid gap-6 lg:grid-cols-3">
-            {POPULAR_FORTS.map((fort) => (
+            {popularForts.map((fort) => (
               <DestinationCard key={fort.id} fort={fort} onAiGuide={startGuide} onExplore={openPlace} />
             ))}
           </div>

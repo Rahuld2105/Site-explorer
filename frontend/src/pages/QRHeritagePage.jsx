@@ -7,6 +7,64 @@ import Loader from "../components/common/Loader";
 import { resolvePlaceImage } from "../utils/placeImages";
 
 const FALLBACK_TEXT = "Not available in database";
+const QR_HERITAGE_IMAGE_RULES = [
+  {
+    match: /shivaji.*samadhi|samadhi.*shivaji/i,
+    image:
+      "https://commons.wikimedia.org/wiki/Special:FilePath/Chhatrapati_Shivaji_Maharaj_Samadhi_Raigad.jpg?width=1600",
+  },
+  {
+    match: /rajaram.*samadhi|samadhi.*rajaram/i,
+    image:
+      "https://commons.wikimedia.org/wiki/Special:FilePath/Chhatrapati_Rajaram_Samadhi.JPG?width=1600",
+  },
+  {
+    match: /hirkani/i,
+    image:
+      "https://commons.wikimedia.org/wiki/Special:FilePath/Cannons_atop_Hirkani_bastion.jpg?width=1600",
+  },
+  {
+    match: /jagadishwar|jagdishwar/i,
+    image:
+      "https://commons.wikimedia.org/wiki/Special:FilePath/Jagdishwar_Temple.jpg?width=1600",
+  },
+  {
+    match: /nagarkhana/i,
+    image:
+      "https://commons.wikimedia.org/wiki/Special:FilePath/Nagarkhana%2C_Raigad_Fort%2C_India.jpg?width=1600",
+  },
+  {
+    match: /kondhaneshwar/i,
+    image:
+      "https://commons.wikimedia.org/wiki/Special:FilePath/Sinhagadfort_konadsheswartemple1_utsav.JPG?width=1600",
+  },
+  {
+    match: /pune.*darw/i,
+    image:
+      "https://commons.wikimedia.org/wiki/Special:FilePath/Pune_Darwaza_-_Sinhagad_Fort_(2).jpg?width=1600",
+  },
+  {
+    match: /kalyan.*darw/i,
+    image:
+      "https://commons.wikimedia.org/wiki/Special:FilePath/Kalyan_Darwaza%2C_Sinhgad_fort%2C_Pune.jpg?width=1600",
+  },
+  {
+    match: /tanaji/i,
+    image:
+      "https://commons.wikimedia.org/wiki/Special:FilePath/Subedar_Tanaji_Malusare_Memorial.jpg?width=1600",
+  },
+];
+
+function resolveQrHeritageImage(place) {
+  const searchText = [place?.name, place?.place_id, place?.qr_id, place?.slug]
+    .filter(Boolean)
+    .join(" ");
+  const matchedRule = QR_HERITAGE_IMAGE_RULES.find(({ match }) =>
+    match.test(searchText),
+  );
+
+  return matchedRule?.image || resolvePlaceImage(place, firstText(place?.image, place?.images?.[0]));
+}
 
 function Icon({ name }) {
   const common = {
@@ -107,6 +165,38 @@ function formatFee(value) {
     : String(value);
 }
 
+function findNarrationVoice(language, availableVoices) {
+  const normalizedVoices = availableVoices.map((voice) => ({
+    voice,
+    lang: String(voice.lang || "").toLowerCase(),
+    name: String(voice.name || "").toLowerCase(),
+  }));
+  const languagePrefixes = language === "mr" ? ["mr", "hi"] : ["en-in", "en"];
+
+  for (const prefix of languagePrefixes) {
+    const match = normalizedVoices.find(
+      ({ lang, name }) =>
+        lang === prefix ||
+        lang.startsWith(`${prefix}-`) ||
+        (prefix === "mr" && name.includes("marathi")) ||
+        (prefix === "hi" && name.includes("hindi")),
+    );
+
+    if (match) {
+      return match.voice;
+    }
+  }
+
+  return null;
+}
+
+function joinNarrationParts(parts) {
+  return parts
+    .map((part) => String(part || "").trim())
+    .filter(Boolean)
+    .join(". ");
+}
+
 function normalizeHeritagePlace(place) {
   const ai = place?.ai_content || {};
   const descriptionEn = firstText(
@@ -153,10 +243,7 @@ function normalizeHeritagePlace(place) {
     entryFee: place?.entry_fee,
     factsEn,
     factsMr,
-    heroImage: resolvePlaceImage(
-      place,
-      firstText(place?.image, place?.images?.[0]),
-    ),
+    heroImage: resolveQrHeritageImage(place),
     historicalImportanceEn,
     historicalImportanceMr,
     name: firstText(place?.name, "Heritage Place"),
@@ -289,36 +376,26 @@ export default function QRHeritagePage() {
 
       const text =
         language === "mr"
-          ? `
-${heritage.name || ""}
-
-${heritage.descriptionMr || heritage.description_mr || ""}
-
-${heritage.historicalImportanceMr || heritage.historical_importance_mr || ""}
-
-बांधकाम वर्ष ${heritage.builtYear || heritage.built_year || ""}
-
-निर्माता ${heritage.builder || ""}
-
-राजवंश ${heritage.dynasty || ""}
-
-${heritage.factsMr?.join(". ") || heritage.facts_mr?.join(". ") || ""}
-`
-          : `
-${heritage.name || ""}
-
-${heritage.descriptionEn || heritage.description_en || ""}
-
-${heritage.historicalImportanceEn || heritage.historical_importance_en || ""}
-
-Built Year ${heritage.builtYear || heritage.built_year || ""}
-
-Builder ${heritage.builder || ""}
-
-Dynasty ${heritage.dynasty || ""}
-
-${heritage.factsEn?.join(". ") || heritage.facts_en?.join(". ") || ""}
-`;
+          ? joinNarrationParts([
+              heritage.audioMr,
+              heritage.name,
+              heritage.descriptionMr,
+              heritage.historicalImportanceMr,
+              heritage.builtYear && `बांधकाम वर्ष ${heritage.builtYear}`,
+              heritage.builder && `निर्माता ${heritage.builder}`,
+              heritage.dynasty && `राजवंश ${heritage.dynasty}`,
+              heritage.factsMr?.join(". "),
+            ])
+          : joinNarrationParts([
+              heritage.audioEn,
+              heritage.name,
+              heritage.descriptionEn,
+              heritage.historicalImportanceEn,
+              heritage.builtYear && `Built year ${heritage.builtYear}`,
+              heritage.builder && `Builder ${heritage.builder}`,
+              heritage.dynasty && `Dynasty ${heritage.dynasty}`,
+              heritage.factsEn?.join(". "),
+            ]);
 
       if (!text) {
         toast.error(
@@ -335,15 +412,15 @@ ${heritage.factsEn?.join(". ") || heritage.facts_en?.join(". ") || ""}
       utterance.rate = language === "mr" ? 0.9 : 0.95;
       utterance.pitch = 1;
 
-      const preferredVoice = voices.find((voice) => {
-        const lang = String(voice.lang || "").toLowerCase();
-        return language === "mr"
-          ? lang === "mr-in" || lang.startsWith("mr")
-          : lang === "en-in" || lang.startsWith("en");
-      });
+      const currentVoices = window.speechSynthesis.getVoices();
+      const preferredVoice = findNarrationVoice(
+        language,
+        currentVoices.length ? currentVoices : voices,
+      );
 
       if (preferredVoice) {
         utterance.voice = preferredVoice;
+        utterance.lang = preferredVoice.lang;
       }
 
       utterance.onstart = () => setSpeechState({ language, status: "playing" });
@@ -354,36 +431,31 @@ ${heritage.factsEn?.join(". ") || heritage.facts_en?.join(". ") || ""}
         utteranceRef.current = null;
         setSpeechState({ language: "", status: "idle" });
       };
-      utterance.onerror = () => {
+      utterance.onerror = (event) => {
         utteranceRef.current = null;
         setSpeechState({ language: "", status: "idle" });
-        toast.error("Voice playback failed");
+        toast.error(`Voice playback failed${event.error ? `: ${event.error}` : ""}`);
       };
 
       utteranceRef.current = utterance;
       window.speechSynthesis.speak(utterance);
     },
     [
-  heritage.name,
-  heritage.descriptionEn,
-  heritage.descriptionMr,
-  heritage.description_en,
-  heritage.description_mr,
-  heritage.historicalImportanceEn,
-  heritage.historicalImportanceMr,
-  heritage.historical_importance_en,
-  heritage.historical_importance_mr,
-  heritage.builtYear,
-  heritage.built_year,
-  heritage.builder,
-  heritage.dynasty,
-  heritage.factsEn,
-  heritage.factsMr,
-  heritage.facts_en,
-  heritage.facts_mr,
-  speechSupported,
-  voices
-],
+      heritage.audioEn,
+      heritage.audioMr,
+      heritage.name,
+      heritage.descriptionEn,
+      heritage.descriptionMr,
+      heritage.historicalImportanceEn,
+      heritage.historicalImportanceMr,
+      heritage.builtYear,
+      heritage.builder,
+      heritage.dynasty,
+      heritage.factsEn,
+      heritage.factsMr,
+      speechSupported,
+      voices,
+    ],
   );
 
   const pauseNarration = useCallback(() => {
@@ -522,10 +594,18 @@ ${heritage.factsEn?.join(". ") || heritage.facts_en?.join(". ") || ""}
                 type="button"
                 className="btn-secondary btn-sm disabled:cursor-not-allowed disabled:opacity-60"
                 onClick={() => speak("mr")}
-                disabled={!speechSupported || !heritage.audioMr}
+                disabled={
+                  !speechSupported ||
+                  (!heritage.audioMr &&
+                    !heritage.descriptionMr &&
+                    !heritage.historicalImportanceMr)
+                }
               >
                 <Icon name="audio" />
-                मराठीत ऐका
+                {speechState.language === "mr" &&
+                speechState.status === "playing"
+                  ? "मराठी सुरू आहे"
+                  : "मराठीत ऐका"}
               </button>
               <button
                 type="button"

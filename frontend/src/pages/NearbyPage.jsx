@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import PropTypes from "prop-types";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import { getNearbyHeritagePlaces } from "../api/placeApi";
+import { getPlaceById } from "../api/placeApi";
 import {
   extractArray,
   extractData,
@@ -24,6 +24,12 @@ const FILTER_CHIPS = [
 ];
 const RADIUS_OPTIONS_KM = [5, 10, 25, 50, 100, 250, 500];
 const AVG_DRIVE_SPEED_KMH = 32;
+const MAIN_HERITAGE_PLACE_IDS = [
+  "rajgad_fort",
+  "raigad_fort",
+  "shaniwar_wada",
+  "sinhagad_fort",
+];
 
 function formatDuration(minutes) {
   const rounded = Math.max(1, Math.round(minutes || 1));
@@ -562,16 +568,14 @@ export default function NearbyPage() {
       setUsedFallback(false);
 
       try {
-        const placesResponse = await getNearbyHeritagePlaces({
-          lat: debouncedLocation.lat,
-          lng: debouncedLocation.lng,
-          radius: radiusKm,
-          limit: 200,
-        });
-        const nearbyItems = resolveNearbyPlaces(placesResponse);
-        const list = nearbyItems.map((place, index) =>
-          enrichNearbyPlace(place, index, debouncedLocation),
+        const responses = await Promise.all(
+          MAIN_HERITAGE_PLACE_IDS.map((placeId) => getPlaceById(placeId)),
         );
+        const list = responses
+          .map((response) => extractData(response)?.place)
+          .filter(Boolean)
+          .map((place, index) => enrichNearbyPlace(place, index, debouncedLocation))
+          .filter((place) => place.distance <= radiusKm);
 
         if (isMounted) {
           setPlaces(list);
